@@ -165,37 +165,187 @@ function displayQuestion() {
 function createUnicorn() {
     unicornCount++;
     const unicorn = document.createElement('div');
-    unicorn.className = 'unicorn';
+    unicorn.className = 'unicorn unicorn-spawning';
     unicorn.id = `unicorn-${unicornCount}`;
     unicorn.textContent = '🦄';
     
-    // Generate random start and end positions (viewport-based)
-    const startX = Math.random() * 80 + 10; // 10% to 90%
-    const startY = Math.random() * 80 + 10;
-    const endX = Math.random() * 80 + 10;
-    const endY = Math.random() * 80 + 10;
-    const mid1X = Math.random() * 80 + 10;
-    const mid1Y = Math.random() * 80 + 10;
-    const mid2X = Math.random() * 80 + 10;
-    const mid2Y = Math.random() * 80 + 10;
-    const randomDuration = Math.random() * 4 + 6; // 6s to 10s (faster)
-    
-    unicorn.style.setProperty('--start-x', startX + 'vw');
-    unicorn.style.setProperty('--start-y', startY + 'vh');
-    unicorn.style.setProperty('--end-x', endX + 'vw');
-    unicorn.style.setProperty('--end-y', endY + 'vh');
-    unicorn.style.setProperty('--mid1-x', mid1X + 'vw');
-    unicorn.style.setProperty('--mid1-y', mid1Y + 'vh');
-    unicorn.style.setProperty('--mid2-x', mid2X + 'vw');
-    unicorn.style.setProperty('--mid2-y', mid2Y + 'vh');
-    unicorn.style.setProperty('--duration', randomDuration + 's');
+    // Start at center of screen (below celebration text)
+    unicorn.style.position = 'fixed';
+    unicorn.style.top = '50%';
+    unicorn.style.left = '50%';
+    unicorn.style.transform = 'translate(-50%, -50%)';
+    unicorn.style.zIndex = '1'; // Below celebration text (1003) and celebration container (1000)
+    unicorn.style.opacity = '0';
+    unicorn.style.fontSize = 'clamp(5em, 12vw, 8em)';
+    unicorn.style.filter = 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.8))';
+    unicorn.style.animation = 'unicornSpawn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards';
     
     document.body.appendChild(unicorn);
     
-    // Start animation
+    // Generate random background positions (constrained to stay within bounds)
+    // Account for unicorn size - keep center at least 10% from edges to ensure fully visible
+    const minPos = -50;
+    const maxPos = 50;
+    const startX = Math.random() * (maxPos - minPos) + minPos;
+    const startY = Math.random() * (maxPos - minPos) + minPos;
+    const endX = Math.random() * (maxPos - minPos) + minPos;
+    const endY = Math.random() * (maxPos - minPos) + minPos;
+    const mid1X = Math.random() * (maxPos - minPos) + minPos;
+    const mid1Y = Math.random() * (maxPos - minPos) + minPos;
+    const mid2X = Math.random() * (maxPos - minPos) + minPos;
+    const mid2Y = Math.random() * (maxPos - minPos) + minPos;
+    const randomDuration = Math.random() * 4 + 6; // 6s to 10s (faster)
+    
+    // After celebration, move to background with confetti effect
     setTimeout(() => {
-        unicorn.style.animation = 'unicornMove var(--duration) ease-in-out infinite';
-    }, 10);
+        // Create extra confetti for the move
+        createUnicornConfetti();
+        
+        // Set background animation properties
+        unicorn.style.setProperty('--start-x', startX + 'vw');
+        unicorn.style.setProperty('--start-y', startY + 'vh');
+        unicorn.style.setProperty('--end-x', endX + 'vw');
+        unicorn.style.setProperty('--end-y', endY + 'vh');
+        unicorn.style.setProperty('--mid1-x', mid1X + 'vw');
+        unicorn.style.setProperty('--mid1-y', mid1Y + 'vh');
+        unicorn.style.setProperty('--mid2-x', mid2X + 'vw');
+        unicorn.style.setProperty('--mid2-y', mid2Y + 'vh');
+        unicorn.style.setProperty('--duration', randomDuration + 's');
+        // Ensure target position is always on-screen (clamp to 10-90%)
+        const clampedTargetX = Math.max(10, Math.min(90, startX));
+        const clampedTargetY = Math.max(10, Math.min(90, startY));
+        unicorn.style.setProperty('--target-x', clampedTargetX + 'vw');
+        unicorn.style.setProperty('--target-y', clampedTargetY + 'vh');
+        
+        // Move to background
+        unicorn.classList.remove('unicorn-spawning');
+        unicorn.style.animation = 'unicornMoveToBackground 1.5s ease-out forwards';
+        
+        // After moving to background, start the continuous movement with boundary checking
+        setTimeout(() => {
+            // Clear any CSS animation that might interfere
+            unicorn.style.animation = 'none';
+            unicorn.style.zIndex = '0';
+            unicorn.style.opacity = '0.25';
+            unicorn.style.filter = 'blur(0.5px)';
+            unicorn.style.fontSize = 'clamp(4em, 10vw, 6em)';
+            unicorn.style.top = 'auto';
+            unicorn.style.left = 'auto';
+            
+            // Set initial position based on target (clamped to ensure on-screen)
+            const clampedStartX = Math.max(10, Math.min(90, startX));
+            const clampedStartY = Math.max(10, Math.min(90, startY));
+            unicorn.style.transform = `translate(calc(${clampedStartX}vw - 50%), calc(${clampedStartY}vh - 50%)) rotate(0deg)`;
+            
+            // Start JavaScript-based animation with boundary bouncing
+            startUnicornAnimation(unicorn, startX, startY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, randomDuration);
+        }, 1500);
+    }, 2000); // After celebration ends
+}
+
+function startUnicornAnimation(unicorn, startX, startY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, duration) {
+    // Use same bounds as generation (10-90%) to ensure consistency
+    const minX = -60; // Minimum X position (vw) - account for unicorn size
+    const maxX = 60; // Maximum X position (vw)
+    const minY = -60; // Minimum Y position (vh)
+    const maxY = 60; // Maximum Y position (vh)
+    
+    // Clamp all positions to stay within bounds
+    const clampX = (x) => Math.max(minX, Math.min(maxX, x));
+    const clampY = (y) => Math.max(minY, Math.min(maxY, y));
+    
+    // Ensure all points are within bounds
+    const points = [
+        { x: clampX(startX), y: clampY(startY) },
+        { x: clampX(mid1X), y: clampY(mid1Y) },
+        { x: clampX(endX), y: clampY(endY) },
+        { x: clampX(mid2X), y: clampY(mid2Y) }
+    ];
+    
+    let currentPointIndex = 0;
+    let progress = 0;
+    const segmentDuration = duration / 4; // Each segment takes 1/4 of total duration
+    let lastTime = null;
+    let animationId = null;
+    
+    function animate(currentTime) {
+        if (!document.body.contains(unicorn)) {
+            if (animationId) cancelAnimationFrame(animationId);
+            return; // Stop if unicorn removed
+        }
+        
+        if (lastTime === null) {
+            lastTime = currentTime;
+        }
+        
+        const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+        lastTime = currentTime;
+        
+        const currentPoint = points[currentPointIndex];
+        const nextPointIndex = (currentPointIndex + 1) % points.length;
+        const nextPoint = points[nextPointIndex];
+        
+        // Use easing function for smooth movement
+        const easedProgress = progress < 0.5 
+            ? 2 * progress * progress 
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        
+        // Interpolate between current and next point
+        let x = currentPoint.x + (nextPoint.x - currentPoint.x) * easedProgress;
+        let y = currentPoint.y + (nextPoint.y - currentPoint.y) * easedProgress;
+        const rotation = easedProgress * 90 + currentPointIndex * 90;
+        
+        // ALWAYS clamp to ensure never goes off-screen
+        x = Math.max(minX, Math.min(maxX, x));
+        y = Math.max(minY, Math.min(maxY, y));
+        
+        unicorn.style.transform = `translate(calc(${x}vw - 50%), calc(${y}vh - 50%)) rotate(${rotation}deg)`;
+        
+        progress += deltaTime / segmentDuration;
+        
+        if (progress >= 1) {
+            progress = 0;
+            currentPointIndex = nextPointIndex;
+        }
+        
+        animationId = requestAnimationFrame(animate);
+    }
+    
+    animationId = requestAnimationFrame(animate);
+}
+
+function createUnicornConfetti() {
+    const celebration = document.getElementById('celebration');
+    for (let i = 0; i < 20; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'unicorn-confetti';
+        confetti.style.position = 'fixed';
+        confetti.style.left = '50%';
+        confetti.style.top = '50%';
+        confetti.style.width = '12px';
+        confetti.style.height = '12px';
+        confetti.style.borderRadius = '50%';
+        confetti.style.pointerEvents = 'none';
+        confetti.style.zIndex = '1003';
+        
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#00b894'];
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        
+        const angle = (Math.PI * 2 * i) / 20;
+        const distance = 200 + Math.random() * 100;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
+        const delay = Math.random() * 0.3;
+        
+        confetti.style.setProperty('--x', x + 'px');
+        confetti.style.setProperty('--y', y + 'px');
+        confetti.style.animation = `unicornConfettiBurst 1.5s ease-out ${delay}s forwards`;
+        
+        document.body.appendChild(confetti);
+        
+        // Remove after animation
+        setTimeout(() => confetti.remove(), 2000);
+    }
 }
 
 function handleAnswer(button) {
@@ -222,7 +372,7 @@ function handleAnswer(button) {
         score++;
         button.classList.add('correct');
         showCelebration();
-        // Create a unicorn for each correct answer!
+        // Create a unicorn that appears with celebration, then moves to background
         createUnicorn();
     } else {
         button.classList.add('incorrect');
