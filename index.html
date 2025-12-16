@@ -19,7 +19,12 @@
         </div>
 
         <div class="quiz-content" id="quizContent">
-            <div class="start-screen" id="startScreen">
+            <div class="nickname-screen" id="nicknameScreen">
+                <h2 class="nickname-title">Enter Your Nickname 🎮</h2>
+                <input type="text" id="nicknameInput" class="nickname-input" placeholder="Type your nickname here..." maxlength="20">
+                <button class="nickname-submit-btn" id="nicknameSubmitBtn">Start Quiz! 🚀</button>
+            </div>
+            <div class="start-screen" id="startScreen" style="display: none;">
                 <div class="loading-container" id="loadingContainer">
                     <div class="loading-bar-container">
                         <div class="loading-bar-fill" id="loadingBarFill"></div>
@@ -44,27 +49,83 @@
             <div class="celebration-text">🎉 Correct! 🎉</div>
         </div>
 
+        <div class="battle-animation" id="battleAnimation" style="display: none;">
+            <div class="sunrise-container">
+                <div class="sun"></div>
+                <div class="sunrise-text">The Final Battle Begins...</div>
+            </div>
+            <div class="battle-field">
+                <div class="unicorn-army" id="unicornArmy"></div>
+                <div class="poop-army" id="poopArmy"></div>
+            </div>
+            <div class="victory-winner" id="victoryWinner" style="display: none;">
+                <div class="winner-emoji" id="winnerEmoji"></div>
+                <div class="winner-text" id="winnerText"></div>
+            </div>
+            <button class="next-to-results-btn" id="nextToResultsBtn" onclick="showResults()" style="display: none;">View Results →</button>
+        </div>
+
         <div class="results" id="results" style="display: none;">
             <h2>Quiz Complete! 🎊</h2>
             <div class="score-display" id="scoreDisplay"></div>
-            <button class="restart-btn" id="restartBtn">Play Again! 🔄</button>
+            <button class="download-btn" id="downloadBtn" onclick="downloadResults()">Download Results 📥</button>
         </div>
     </div>
 
-    <script type="text/csv" id="questionsData">
-What is the capital of France?, Paris, Lyon, Tokyo, Potsdam
-How many days are in a week?, 7, 14, 21, 28
-What is the capital of Germany?, Berlin, Hamburg, Munich, Frankfurt
-What is the capital of Italy?, Rome, Milan, Naples, Turin
-What is the capital of Spain?, Madrid, Barcelona, Valencia, Seville
-What is the capital of Portugal?, Lisbon, Porto, Braga, Faro
-What is the capital of Greece?, Athens, Thessaloniki, Patras, Heraklion
-What is the capital of Turkey?, Ankara, Istanbul, Izmir, Bursa
-What is the capital of Russia?, Moscow, Saint Petersburg, Novosibirsk, Yekaterinburg
-What is the capital of China?, Beijing, Shanghai, Guangzhou, Shenzhen
-What is the capital of Japan?, Tokyo, Osaka, Nagoya, Sapporo
-    </script>
 
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+      
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyDbsC2-JAVaMPJ1P5MXUzGNFocO1ckYW1s",
+          authDomain: "enkis-fakahoot.firebaseapp.com",
+          projectId: "enkis-fakahoot",
+          storageBucket: "enkis-fakahoot.firebasestorage.app",
+          messagingSenderId: "472090260372",
+          appId: "1:472090260372:web:3970ed2ce2e8274752d581",
+          measurementId: "G-Q0E9HS1551"
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+        
+        console.log('🔥 Firebase initialized successfully');
+        console.log('📊 Firestore database:', db);
+        console.log('🔑 Project ID:', firebaseConfig.projectId);
+        
+        // Make Firebase functions available globally
+        window.firebaseDB = db;
+        window.firebaseAddDoc = addDoc;
+        window.firebaseCollection = collection;
+        
+        // Test function to verify Firebase connectivity
+        window.testFirebase = async function() {
+            console.log('🧪 Testing Firebase connection...');
+            try {
+                const testData = {
+                    test: true,
+                    timestamp: new Date(),
+                    message: 'Test connection'
+                };
+                const docRef = await addDoc(collection(db, 'quizAnswers'), testData);
+                console.log('✅ Firebase test successful! Document ID:', docRef.id);
+                return true;
+            } catch (error) {
+                console.error('❌ Firebase test failed:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                return false;
+            }
+        };
+        
+        console.log('💡 To test Firebase, run: testFirebase() in the console');
+      </script>
     <script src="script.js"></script>
 </body>
 </html>
