@@ -2,6 +2,7 @@ let questions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let answered = false;
+let unicornCount = 0;
 
 // Parse CSV file - uses embedded data first (works immediately), then tries to update from external file
 function loadQuestions() {
@@ -135,6 +136,8 @@ function displayQuestion() {
     document.getElementById('progressText').textContent = 
         `${currentQuestionIndex + 1} / ${questions.length}`;
     
+    // Unicorns are created when questions are answered correctly, not here
+    
     // Create question HTML
     const questionHTML = `
         <div class="question-container">
@@ -157,6 +160,42 @@ function displayQuestion() {
             handleAnswer(this);
         });
     });
+}
+
+function createUnicorn() {
+    unicornCount++;
+    const unicorn = document.createElement('div');
+    unicorn.className = 'unicorn';
+    unicorn.id = `unicorn-${unicornCount}`;
+    unicorn.textContent = '🦄';
+    
+    // Generate random start and end positions (viewport-based)
+    const startX = Math.random() * 80 + 10; // 10% to 90%
+    const startY = Math.random() * 80 + 10;
+    const endX = Math.random() * 80 + 10;
+    const endY = Math.random() * 80 + 10;
+    const mid1X = Math.random() * 80 + 10;
+    const mid1Y = Math.random() * 80 + 10;
+    const mid2X = Math.random() * 80 + 10;
+    const mid2Y = Math.random() * 80 + 10;
+    const randomDuration = Math.random() * 4 + 6; // 6s to 10s (faster)
+    
+    unicorn.style.setProperty('--start-x', startX + 'vw');
+    unicorn.style.setProperty('--start-y', startY + 'vh');
+    unicorn.style.setProperty('--end-x', endX + 'vw');
+    unicorn.style.setProperty('--end-y', endY + 'vh');
+    unicorn.style.setProperty('--mid1-x', mid1X + 'vw');
+    unicorn.style.setProperty('--mid1-y', mid1Y + 'vh');
+    unicorn.style.setProperty('--mid2-x', mid2X + 'vw');
+    unicorn.style.setProperty('--mid2-y', mid2Y + 'vh');
+    unicorn.style.setProperty('--duration', randomDuration + 's');
+    
+    document.body.appendChild(unicorn);
+    
+    // Start animation
+    setTimeout(() => {
+        unicorn.style.animation = 'unicornMove var(--duration) ease-in-out infinite';
+    }, 10);
 }
 
 function handleAnswer(button) {
@@ -183,6 +222,8 @@ function handleAnswer(button) {
         score++;
         button.classList.add('correct');
         showCelebration();
+        // Create a unicorn for each correct answer!
+        createUnicorn();
     } else {
         button.classList.add('incorrect');
     }
@@ -272,6 +313,13 @@ document.addEventListener('DOMContentLoaded', () => {
         currentQuestionIndex = 0;
         score = 0;
         answered = false;
+        unicornCount = 0;
+        
+        // Remove all unicorns
+        document.querySelectorAll('.unicorn').forEach(unicorn => {
+            unicorn.remove();
+        });
+        
         document.querySelector('.quiz-container').classList.remove('quiz-started');
         document.getElementById('quizContent').style.display = 'block';
         document.getElementById('results').style.display = 'none';
