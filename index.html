@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fakahoot Quiz - Let's Play! 🎉</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="quiz-container">
+        <div class="header">
+            <h1 class="title">🎯 Fakahoot Quiz 🎯</h1>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0 / 0</div>
+            </div>
+        </div>
+
+        <div class="quiz-content" id="quizContent">
+            <div class="start-screen" id="startScreen">
+                <div class="loading-container" id="loadingContainer">
+                    <div class="loading-bar-container">
+                        <div class="loading-bar-fill" id="loadingBarFill"></div>
+                    </div>
+                    <div class="loading-text">Preparing your quiz... 🎨</div>
+                </div>
+                <button class="start-btn" id="startBtn" style="display: none;">Click to Start! 🚀</button>
+            </div>
+        </div>
+
+        <div class="celebration" id="celebration">
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="celebration-text">🎉 Correct! 🎉</div>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <h2>Quiz Complete! 🎊</h2>
+            <div class="score-display" id="scoreDisplay"></div>
+            <button class="restart-btn" id="restartBtn">Play Again! 🔄</button>
+        </div>
+    </div>
+
+    <script type="text/csv" id="questionsData">
+What is the capital of France?, Paris, Lyon, Tokyo, Potsdam
+How many days are in a week?, 7, 14, 21, 28
+What is the capital of Germany?, Berlin, Hamburg, Munich, Frankfurt
+What is the capital of Italy?, Rome, Milan, Naples, Turin
+What is the capital of Spain?, Madrid, Barcelona, Valencia, Seville
+What is the capital of Portugal?, Lisbon, Porto, Braga, Faro
+What is the capital of Greece?, Athens, Thessaloniki, Patras, Heraklion
+What is the capital of Turkey?, Ankara, Istanbul, Izmir, Bursa
+What is the capital of Russia?, Moscow, Saint Petersburg, Novosibirsk, Yekaterinburg
+What is the capital of China?, Beijing, Shanghai, Guangzhou, Shenzhen
+What is the capital of Japan?, Tokyo, Osaka, Nagoya, Sapporo
+    </script>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
