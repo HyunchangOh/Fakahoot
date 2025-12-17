@@ -1,15 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fakahoot Quiz - Let's Play! 🎉</title>
+    <title>🦄 AI Across Domains Quiz🎉</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 8V5C21 3.89543 20.1046 3 19 3H16M16 21H19C20.1046 21 21 20.1046 21 19V16M3 16V19C3 20.1046 3.89543 21 5 21H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
     <div class="quiz-container">
+        <div class="language-toggle" id="languageToggle">
+            <button class="lang-btn" id="langBtnDE" onclick="switchLanguage('de')" title="Deutsch">
+                <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1e9-1f1ea.svg" alt="🇩🇪" class="flag-icon">
+            </button>
+            <button class="lang-btn" id="langBtnEN" onclick="switchLanguage('en')" title="English">
+                <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f1ec-1f1e7.svg" alt="🇬🇧" class="flag-icon">
+            </button>
+        </div>
         <div class="header">
-            <h1 class="title">🎯 Fakahoot Quiz 🎯</h1>
+            <h1 class="title">🎯 Modul 7 Post-Test 🎯</h1>
             <div class="progress-container">
                 <div class="progress-bar" id="progressBar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -19,19 +32,42 @@
         </div>
 
         <div class="quiz-content" id="quizContent">
-            <div class="nickname-screen" id="nicknameScreen">
-                <h2 class="nickname-title">Enter Your Nickname 🎮</h2>
-                <input type="text" id="nicknameInput" class="nickname-input" placeholder="Type your nickname here..." maxlength="20">
-                <button class="nickname-submit-btn" id="nicknameSubmitBtn">Start Quiz! 🚀</button>
+            <div class="card-container">
+                <div class="card-inner" id="cardInner">
+                    <!-- Front of card - Nickname screen -->
+                    <div class="card-front nickname-screen" id="nicknameScreen">
+                        <h2 class="nickname-title">Wie heißt Du? 🎮</h2>
+                        <input type="text" id="nicknameInput" class="nickname-input" placeholder="Wie heißt Du?" maxlength="20">
+                        <button class="nickname-submit-btn" id="nicknameSubmitBtn">Quiz starten! 🚀</button>
+                    </div>
+                    <!-- Back of card - Credits screen -->
+                    <div class="card-back credits-screen" id="creditsScreen" style="display: none;">
+                        <div class="credits-content">
+                            <p class="credits-top" id="creditsTop"></p>
+                            <p class="credits-text" id="creditsText">Entwickelt mit ❤️ von Hyunchang Oh für AI Across Domains 2025/2026 WS</p>
+                            <div class="credits-list" id="creditsList">
+                                <p>Cursor AI für die Frontend Implementation</p>
+                                <p>Gemini für die Backend Implementation</p>
+                            </div>
+                            <div class="credits-bottom" id="creditsBottom">
+                                <p class="credits-bottom-text"></p>
+                                <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" class="credits-license-link"></a>
+                            </div>
+                        </div>
+                        <a href="#" class="back-link" id="backLink" onclick="event.preventDefault(); flipToQuiz();">Zurück zum Quiz</a>
+                    </div>
+                </div>
+                <!-- Credits link positioned at bottom right corner of card container -->
+                <a href="#" class="credits-link" id="creditsLink" onclick="event.preventDefault(); flipToCredits();">KI-Systeme, die für das Quiz verwendet wurden</a>
             </div>
             <div class="start-screen" id="startScreen" style="display: none;">
                 <div class="loading-container" id="loadingContainer">
                     <div class="loading-bar-container">
                         <div class="loading-bar-fill" id="loadingBarFill"></div>
                     </div>
-                    <div class="loading-text">Preparing your quiz... 🎨</div>
+                    <div class="loading-text">Dein Quiz wird vorbereitet... 🎨</div>
                 </div>
-                <button class="start-btn" id="startBtn" style="display: none;">Click to Start! 🚀</button>
+                <button class="start-btn" id="startBtn" style="display: none;">Los geht's! 🚀</button>
             </div>
         </div>
 
@@ -46,13 +82,13 @@
             <div class="confetti"></div>
             <div class="confetti"></div>
             <div class="confetti"></div>
-            <div class="celebration-text">🎉 Correct! 🎉</div>
+            <div class="celebration-text">🎉 Richtig! 🎉</div>
         </div>
 
         <div class="battle-animation" id="battleAnimation" style="display: none;">
             <div class="sunrise-container">
                 <div class="sun"></div>
-                <div class="sunrise-text">The Final Battle Begins...</div>
+                <div class="sunrise-text">Der letzte Kampf beginnt...</div>
             </div>
             <div class="battle-field">
                 <div class="unicorn-army" id="unicornArmy"></div>
@@ -62,13 +98,14 @@
                 <div class="winner-emoji" id="winnerEmoji"></div>
                 <div class="winner-text" id="winnerText"></div>
             </div>
-            <button class="next-to-results-btn" id="nextToResultsBtn" onclick="showResults()" style="display: none;">View Results →</button>
+            <button class="next-to-results-btn" id="nextToResultsBtn" onclick="showResults()" style="display: none;">Ergebnisse anzeigen →</button>
         </div>
 
         <div class="results" id="results" style="display: none;">
-            <h2>Quiz Complete! 🎊</h2>
+            <h2>Quiz abgeschlossen! 🎊</h2>
             <div class="score-display" id="scoreDisplay"></div>
-            <button class="download-btn" id="downloadBtn" onclick="downloadResults()">Download Results 📥</button>
+            <button class="download-btn" id="downloadBtn" onclick="downloadResults()">Ergebnisse herunterladen 📥</button>
+            <a href="#" class="credits-link-results" id="creditsLinkResults" onclick="event.preventDefault(); showCreditsFromResults();">KI-Systeme, die für das Quiz verwendet wurden</a>
         </div>
     </div>
 
@@ -90,41 +127,143 @@
           measurementId: "G-Q0E9HS1551"
         };
       
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const db = getFirestore(app);
-        
-        console.log('🔥 Firebase initialized successfully');
-        console.log('📊 Firestore database:', db);
-        console.log('🔑 Project ID:', firebaseConfig.projectId);
+        // Initialize Firebase with comprehensive error handling
+        let app, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            console.log('✅ Firebase App initialized:', app.name);
+            
+            // Initialize Analytics (non-critical - wrap in try-catch so it doesn't break Firestore)
+            try {
+                const analytics = getAnalytics(app);
+                console.log('✅ Analytics initialized');
+            } catch (analyticsError) {
+                console.warn('⚠️ Analytics initialization failed (non-critical):', analyticsError.message);
+                console.warn('  - This is often caused by ad blockers blocking Google Tag Manager');
+                console.warn('  - Firestore will still work normally');
+                // Continue - analytics failure shouldn't break the app
+            }
+            
+            // Initialize Firestore (critical - must succeed)
+            db = getFirestore(app);
+            console.log('✅ Firestore database initialized');
+            console.log('📊 Firestore instance:', db);
+            console.log('🔑 Project ID:', firebaseConfig.projectId);
+            console.log('🌐 API Key:', firebaseConfig.apiKey.substring(0, 10) + '...');
+            
+            // Verify Firestore is ready
+            if (!db) {
+                throw new Error('Firestore database object is null or undefined');
+            }
+            
+        } catch (initError) {
+            console.error('❌ CRITICAL: Firebase initialization failed!', initError);
+            console.error('Error details:', {
+                name: initError.name,
+                message: initError.message,
+                stack: initError.stack
+            });
+            alert('Firebase initialization failed. Check console for details.');
+            throw initError;
+        }
         
         // Make Firebase functions available globally
         window.firebaseDB = db;
         window.firebaseAddDoc = addDoc;
         window.firebaseCollection = collection;
+        window.firebaseApp = app;
         
-        // Test function to verify Firebase connectivity
+        // Comprehensive Firebase status check function
+        window.checkFirebaseStatus = function() {
+            console.log('🔍 Firebase Status Check:');
+            console.log('  - App initialized:', !!app);
+            console.log('  - Firestore DB:', !!db);
+            console.log('  - addDoc function:', typeof addDoc === 'function');
+            console.log('  - collection function:', typeof collection === 'function');
+            console.log('  - window.firebaseDB:', !!window.firebaseDB);
+            console.log('  - window.firebaseAddDoc:', typeof window.firebaseAddDoc === 'function');
+            console.log('  - window.firebaseCollection:', typeof window.firebaseCollection === 'function');
+            console.log('  - Project ID:', firebaseConfig.projectId);
+            return {
+                appInitialized: !!app,
+                dbInitialized: !!db,
+                functionsAvailable: !!(window.firebaseDB && window.firebaseAddDoc && window.firebaseCollection)
+            };
+        };
+        
+        // Enhanced test function to verify Firebase connectivity
         window.testFirebase = async function() {
             console.log('🧪 Testing Firebase connection...');
+            console.log('📋 Test data will be written to: quizAnswers collection');
+            
+            // First check status
+            const status = window.checkFirebaseStatus();
+            if (!status.functionsAvailable) {
+                console.error('❌ Firebase functions not available!');
+                return false;
+            }
+            
             try {
                 const testData = {
                     test: true,
                     timestamp: new Date(),
-                    message: 'Test connection'
+                    message: 'Test connection from browser',
+                    testId: 'test-' + Date.now()
                 };
+                
+                console.log('📤 Sending test data:', testData);
+                const startTime = Date.now();
+                
                 const docRef = await addDoc(collection(db, 'quizAnswers'), testData);
-                console.log('✅ Firebase test successful! Document ID:', docRef.id);
-                return true;
+                
+                const duration = Date.now() - startTime;
+                console.log('✅ Firebase test successful!');
+                console.log('  - Document ID:', docRef.id);
+                console.log('  - Response time:', duration + 'ms');
+                console.log('  - Full document reference:', docRef);
+                
+                // Verify the document was actually written by checking network
+                console.log('💡 Check the Network tab in DevTools for Firestore API calls');
+                console.log('💡 Check Firestore Console: https://console.firebase.google.com/project/' + firebaseConfig.projectId + '/firestore');
+                
+                return { success: true, docId: docRef.id, duration: duration };
             } catch (error) {
-                console.error('❌ Firebase test failed:', error);
-                console.error('Error code:', error.code);
-                console.error('Error message:', error.message);
-                return false;
+                console.error('❌ Firebase test failed!');
+                console.error('  - Error name:', error.name);
+                console.error('  - Error code:', error.code);
+                console.error('  - Error message:', error.message);
+                console.error('  - Full error object:', error);
+                
+                // Detailed error analysis
+                if (error.code) {
+                    const errorCodes = {
+                        'permission-denied': 'Security rules are blocking the write. Check firestore.rules',
+                        'unavailable': 'Firestore service is unavailable. Check internet connection.',
+                        'failed-precondition': 'Database not initialized or in wrong mode.',
+                        'invalid-argument': 'Invalid data format or missing required fields.',
+                        'deadline-exceeded': 'Request timed out. Check network connection.',
+                        'not-found': 'Collection or document path not found.',
+                        'already-exists': 'Document already exists (should not happen with addDoc).',
+                        'resource-exhausted': 'Quota exceeded or too many requests.',
+                        'aborted': 'Operation was aborted.',
+                        'out-of-range': 'Value out of range.',
+                        'unimplemented': 'Operation not implemented.',
+                        'internal': 'Internal Firestore error.',
+                        'unauthenticated': 'Authentication required.',
+                        'data-loss': 'Data corruption detected.'
+                    };
+                    
+                    const errorExplanation = errorCodes[error.code] || 'Unknown error code';
+                    console.error('  - Error explanation:', errorExplanation);
+                }
+                
+                return { success: false, error: error };
             }
         };
         
-        console.log('💡 To test Firebase, run: testFirebase() in the console');
+        console.log('💡 Firebase diagnostic functions available:');
+        console.log('  - checkFirebaseStatus() - Check if Firebase is properly initialized');
+        console.log('  - testFirebase() - Test writing to Firestore');
       </script>
     <script src="script.js"></script>
 </body>
