@@ -17,6 +17,9 @@ let firebaseSuccessCount = 0;
 let firebaseFailureCount = 0;
 let currentLanguage = 'de'; // 'de' for German, 'en' for English
 let questionShuffleOrder = []; // Store shuffle order for each question to maintain consistency across languages
+let selectedModule = null; // Selected module (1-9, or 'final')
+window.selectedModule = null; // Make it globally accessible
+let userGroup = null; // User group from URL parameter
 
 // Translation object for all UI text
 const translations = {
@@ -29,10 +32,10 @@ const translations = {
         submitAnswer: 'Antwort absenden ✓',
         nextQuestion: 'Nächste Frage →',
         correct: '🎉 Richtig! 🎉',
-        wrong: '💩 Falsch! 💩',
+        wrong: '🐸 Falsch! 🐸',
         finalBattle: 'Der letzte Kampf beginnt...',
         unicornsWin: 'Einhörner gewinnen! 🎉',
-        poopsWin: 'Kacke gewinnt! 💩',
+        frogsWin: 'Frösche gewinnen! 🐸',
         tie: 'Unentschieden!',
         viewResults: 'Ergebnisse anzeigen →',
         quizComplete: 'Quiz abgeschlossen! 🎊',
@@ -50,11 +53,13 @@ const translations = {
         creditsLicense: 'https://creativecommons.org/licenses/by/4.0/',
         youScored: (score, total) => `Du hast ${score} von ${total} Punkten erreicht!`,
         firebaseNoData: '⚠️ Keine Daten wurden an Firebase gesendet. Überprüfe die Browser-Konsole auf Fehler.',
-        firebaseAllSuccess: (count) => `✅ Alle ${count} Frage(n) erfolgreich in Firebase gespeichert!`,
+        firebaseAllSuccess: (count) => `✅ Alle ${count} Frage(n) erfolgreich an die Dozenten gemeldet!`,
         firebasePartial: (success, failed) => `⚠️ Teilweise erfolgreich: ${success} gespeichert, ${failed} fehlgeschlagen. Überprüfe die Konsole für Details.`,
         firebaseAllFailed: (count) => `❌ Alle ${count} Versuch(e) fehlgeschlagen. Überprüfe die Browser-Konsole (F12) auf Fehler.`,
         firebaseStatus: (success, failed) => `Firebase Status: ${success} gespeichert, ${failed} fehlgeschlagen`,
-        checkConsole: 'Überprüfe die Browser-Konsole (F12) für detaillierte Protokolle'
+        checkConsole: 'Überprüfe die Browser-Konsole (F12) für detaillierte Protokolle',
+        firebaseAllSuccessMessage: 'Aber du kannst die Ergebnisse trotzdem herunterladen, nur für den Fall.',
+        firebaseNotAllSuccessMessage: 'Etwas ist schief gelaufen. Bitte lade die Ergebnisse mit dem Button unten herunter und sende sie per E-Mail an die Dozenten.'
     },
     en: {
         nicknameTitle: 'What\'s your name? 🎮',
@@ -65,10 +70,10 @@ const translations = {
         submitAnswer: 'Submit Answer ✓',
         nextQuestion: 'Next Question →',
         correct: '🎉 Correct! 🎉',
-        wrong: '💩 Wrong! 💩',
+        wrong: '🐸 Wrong! 🐸',
         finalBattle: 'The Final Battle Begins...',
         unicornsWin: 'Unicorns Win! 🎉',
-        poopsWin: 'Poops Win! 💩',
+        frogsWin: 'Frogs Win! 🐸',
         tie: 'It\'s a Tie!',
         viewResults: 'View Results →',
         quizComplete: 'Quiz Complete! 🎊',
@@ -86,11 +91,13 @@ const translations = {
         creditsLicense: 'https://creativecommons.org/licenses/by/4.0/',
         youScored: (score, total) => `You scored ${score} out of ${total}!`,
         firebaseNoData: '⚠️ No data was sent to Firebase. Check the browser console for errors.',
-        firebaseAllSuccess: (count) => `✅ All ${count} question(s) successfully saved to Firebase!`,
+        firebaseAllSuccess: (count) => `✅ All ${count} question(s) successfully reported to lecturers!`,
         firebasePartial: (success, failed) => `⚠️ Partial success: ${success} saved, ${failed} failed. Check console for details.`,
         firebaseAllFailed: (count) => `❌ All ${count} attempt(s) failed. Check browser console (F12) for errors.`,
         firebaseStatus: (success, failed) => `Firebase Status: ${success} saved, ${failed} failed`,
-        checkConsole: 'Check browser console (F12) for detailed logs'
+        checkConsole: 'Check browser console (F12) for detailed logs',
+        firebaseAllSuccessMessage: 'But you can still download the results just in case.',
+        firebaseNotAllSuccessMessage: 'Something went wrong. Please download the results with the button below and send it to the lecturers via Email.'
     }
 };
 
@@ -103,15 +110,54 @@ function t(key, ...args) {
     return translation || key;
 }
 
+// Module selection function
+function selectModule(moduleNumber) {
+    selectedModule = moduleNumber;
+    window.selectedModule = moduleNumber; // Make it globally accessible
+    console.log(`✅ Module ${moduleNumber} selected`);
+    
+    // Hide module selection screen, show nickname screen
+    document.getElementById('moduleSelectionScreen').style.display = 'none';
+    document.getElementById('cardContainer').style.display = 'block';
+    
+    // Update title
+    const titleElement = document.querySelector('.title');
+    if (titleElement) {
+        if (moduleNumber === 'final') {
+            titleElement.textContent = `🎯 Final Test 🎯`;
+        } else {
+            titleElement.textContent = `🎯 Modul ${moduleNumber} Post-Test 🎯`;
+        }
+    }
+    
+    // Load questions and feedbacks for selected module
+    loadQuestions().catch(error => {
+        console.error('Error loading questions:', error);
+    });
+}
+
 // Load feedback data from TSV files (both German and English)
 async function loadFeedbacks() {
+    if (!selectedModule) {
+        console.error('No module selected');
+        return;
+    }
+    
+    // Skip feedbacks for final module
+    if (selectedModule === 'final') {
+        feedbacksDE = [];
+        feedbacksEN = [];
+        return;
+    }
+    
     try {
-        console.log('📥 Loading feedback from feedback.tsv and feedback_eng.tsv...');
+        console.log(`📥 Loading feedback from feedbacks/feedback${selectedModule}.tsv and feedbacks/feedback_eng${selectedModule}.tsv...`);
         
-        // Load German feedback
-        const responseDE = await fetch('feedback.tsv');
+        // Load German feedback (with cache-busting)
+        const cacheBuster = `?v=${Date.now()}`;
+        const responseDE = await fetch(`feedbacks/feedback${selectedModule}.tsv${cacheBuster}`);
         if (!responseDE.ok) {
-            console.warn(`Failed to load feedback.tsv: ${responseDE.status} ${responseDE.statusText}`);
+            console.warn(`Failed to load feedbacks/feedback${selectedModule}.tsv: ${responseDE.status} ${responseDE.statusText}`);
             feedbacksDE = [];
         } else {
             const tsvTextDE = await responseDE.text();
@@ -131,10 +177,10 @@ async function loadFeedbacks() {
             }
         }
         
-        // Load English feedback
-        const responseEN = await fetch('feedback_eng.tsv');
+        // Load English feedback (with cache-busting)
+        const responseEN = await fetch(`feedbacks/feedback_eng${selectedModule}.tsv${cacheBuster}`);
         if (!responseEN.ok) {
-            console.warn(`Failed to load feedback_eng.tsv: ${responseEN.status} ${responseEN.statusText}`);
+            console.warn(`Failed to load feedbacks/feedback_eng${selectedModule}.tsv: ${responseEN.status} ${responseEN.statusText}`);
             feedbacksEN = [];
         } else {
             const tsvTextEN = await responseEN.text();
@@ -169,38 +215,224 @@ async function loadFeedbacks() {
 
 // Load questions from TSV files (both German and English)
 async function loadQuestions() {
+    if (!selectedModule) {
+        console.error('No module selected');
+        return;
+    }
+    
+    // Handle 'final' module differently (CSV format with multiple correct answers)
+    if (selectedModule === 'final') {
+        try {
+            console.log(`📥 Loading questions from questions/questions_final.tsv and questions/questions_eng_final.tsv...`);
+            
+            const cacheBuster = `?v=${Date.now()}`;
+            
+            // Load German questions
+            const responseDE = await fetch(`questions/questions_final.tsv${cacheBuster}`);
+            if (!responseDE.ok) {
+                throw new Error(`Failed to load questions/questions_final.tsv: ${responseDE.status} ${responseDE.statusText}`);
+            }
+            const textDE = await responseDE.text();
+            if (!textDE || textDE.trim().length === 0) {
+                throw new Error(`questions/questions_final.tsv is empty`);
+            }
+            
+            // Load English questions
+            const responseEN = await fetch(`questions/questions_eng_final.tsv${cacheBuster}`);
+            if (!responseEN.ok) {
+                throw new Error(`Failed to load questions/questions_eng_final.tsv: ${responseEN.status} ${responseEN.statusText}`);
+            }
+            const textEN = await responseEN.text();
+            if (!textEN || textEN.trim().length === 0) {
+                throw new Error(`questions/questions_eng_final.tsv is empty`);
+            }
+            
+            // Helper function to parse TSV questions
+            const parseQuestions = (text) => {
+                const lines = text.trim().split('\n').filter(line => line.trim());
+                return lines.map(line => {
+                    // Try semicolon first, then tab (for compatibility)
+                    let parts = line.split(';').map(part => part.trim());
+                    if (parts.length < 3) {
+                        parts = line.split('\t').map(part => part.trim());
+                    }
+                    if (parts.length < 3) return null;
+                    
+                    const question = parts[0];
+                    
+                    // Check for PNG filename at the end
+                    let imagePath = null;
+                    let numCorrect = 1;
+                    const nonEmptyParts = parts.filter(p => p);
+                    const lastPart = nonEmptyParts[nonEmptyParts.length - 1];
+                    const secondLastPart = nonEmptyParts.length > 1 ? nonEmptyParts[nonEmptyParts.length - 2] : null;
+                    
+                    // Check if last part is a PNG filename
+                    const isPngFile = lastPart && /\.png$/i.test(lastPart);
+                    
+                    if (isPngFile) {
+                        imagePath = `pictures/questions_pictures/${lastPart}`;
+                        // Check if the part before PNG is a number (multiple correct answers)
+                        if (secondLastPart) {
+                            const parsedNum = parseInt(secondLastPart);
+                            if (!isNaN(parsedNum) && parsedNum > 0 && parsedNum < 10) {
+                                numCorrect = parsedNum;
+                            }
+                        }
+                    } else {
+                        // No PNG, check if last part is a number
+                        const parsedNum = parseInt(lastPart);
+                        if (!isNaN(parsedNum) && parsedNum > 0 && parsedNum < 10) {
+                            numCorrect = parsedNum;
+                        }
+                    }
+                    
+                    // Get all options (exclude empty parts, "Weiß ich nicht"/"I don't know", trailing numbers, and PNG filenames)
+                    const options = [];
+                    for (let i = 1; i < parts.length; i++) {
+                        const part = parts[i];
+                        if (!part) continue;
+                        const partLower = part.toLowerCase();
+                        if (partLower === 'weiß ich nicht' || partLower === 'weiss ich nicht' || 
+                            partLower === "i don't know" || partLower === 'i don\'t know') continue;
+                        
+                        // Skip PNG filenames
+                        if (/\.png$/i.test(part)) continue;
+                        
+                        // Check if it's a standalone number (likely the numCorrect indicator)
+                        const num = parseInt(part);
+                        const isLastPart = i === parts.length - 1;
+                        const nextPart = i < parts.length - 1 ? parts[i + 1] : null;
+                        const isNextPng = nextPart && /\.png$/i.test(nextPart);
+                        
+                        // Skip if it's a number and either:
+                        // 1. It's the last part (and not followed by PNG), OR
+                        // 2. It's followed by a PNG file (it's the numCorrect indicator before the image)
+                        if (!isNaN(num) && part === String(num)) {
+                            if (isLastPart && !isNextPng) {
+                                // This is the numCorrect indicator at the very end, skip it
+                                break;
+                            } else if (isNextPng) {
+                                // This is the numCorrect indicator before PNG, skip it
+                                continue;
+                            }
+                        }
+                        options.push(part);
+                    }
+                    
+                    // First numCorrect options are correct answers
+                    const correctAnswers = options.slice(0, numCorrect);
+                    const incorrectAnswers = options.slice(numCorrect);
+                    
+                    // Combine: correct answers first, then incorrect
+                    const allOptions = [...correctAnswers, ...incorrectAnswers];
+                    
+                    if (correctAnswers.length === 0) {
+                        console.warn(`No correct answers found for question: ${question.substring(0, 50)}...`);
+                        return null;
+                    }
+                    
+                    return {
+                        question: question,
+                        correctAnswer: correctAnswers[0], // For compatibility, use first correct answer
+                        correctAnswers: correctAnswers, // Store all correct answers
+                        options: allOptions,
+                        imagePath: imagePath // Store image path if present
+                    };
+                }).filter(q => q !== null);
+            };
+            
+            // Parse both German and English questions
+            questionsDE = parseQuestions(textDE);
+            questionsEN = parseQuestions(textEN);
+            
+            // Create mapping between German and English answers for each question
+            if (questionsDE.length !== questionsEN.length) {
+                console.warn('⚠️ German and English question counts do not match!');
+            }
+            
+            // Set current questions based on language
+            questions = currentLanguage === 'de' ? questionsDE : questionsEN;
+            
+            // Shuffle options for current questions
+            questions = questions.map(q => ({
+                ...q,
+                options: [...q.options].sort(() => Math.random() - 0.5)
+            }));
+            
+            if (questions.length > 0) {
+                console.log(`✅ Loaded ${questionsDE.length} German and ${questionsEN.length} English questions for final module`);
+                // Don't load feedbacks for final module (as per user's note)
+                // Don't call showStartScreen() here - it will be called after nickname is submitted
+            } else {
+                document.getElementById('quizContent').innerHTML = 
+                    '<div class="error">Keine gültigen Fragen gefunden.</div>';
+            }
+        } catch (error) {
+            console.error('❌ Error loading questions:', error);
+            document.getElementById('quizContent').innerHTML = 
+                `<div class="error">
+                    <h3>Fehler beim Laden der Fragen</h3>
+                    <p>${error.message}</p>
+                    <p>Stelle sicher, dass questions/questions_final.tsv und questions/questions_eng_final.tsv existieren</p>
+                </div>`;
+        }
+        return;
+    }
+    
+    // Original logic for modules 7, 8, 9
     try {
-        console.log('📥 Loading questions from questions.tsv and questions_eng.tsv...');
+        console.log(`📥 Loading questions from questions/questions${selectedModule}.tsv and questions/questions_eng${selectedModule}.tsv...`);
         
-        // Load German questions
-        const responseDE = await fetch('questions.tsv');
+        // Load German questions (with cache-busting)
+        const cacheBuster = `?v=${Date.now()}`;
+        const responseDE = await fetch(`questions/questions${selectedModule}.tsv${cacheBuster}`);
         if (!responseDE.ok) {
-            throw new Error(`Failed to load questions.tsv: ${responseDE.status} ${responseDE.statusText}`);
+            throw new Error(`Failed to load questions/questions${selectedModule}.tsv: ${responseDE.status} ${responseDE.statusText}`);
         }
         const tsvTextDE = await responseDE.text();
         if (!tsvTextDE || tsvTextDE.trim().length === 0) {
-            throw new Error('questions.tsv is empty');
+            throw new Error(`questions/questions${selectedModule}.tsv is empty`);
         }
         
-        // Load English questions
-        const responseEN = await fetch('questions_eng.tsv');
+        // Load English questions (with cache-busting)
+        const responseEN = await fetch(`questions/questions_eng${selectedModule}.tsv${cacheBuster}`);
         if (!responseEN.ok) {
-            throw new Error(`Failed to load questions_eng.tsv: ${responseEN.status} ${responseEN.statusText}`);
+            throw new Error(`Failed to load questions/questions_eng${selectedModule}.tsv: ${responseEN.status} ${responseEN.statusText}`);
         }
         const tsvTextEN = await responseEN.text();
         if (!tsvTextEN || tsvTextEN.trim().length === 0) {
-            throw new Error('questions_eng.tsv is empty');
+            throw new Error(`questions/questions_eng${selectedModule}.tsv is empty`);
         }
         
         // Parse German questions
         const linesDE = tsvTextDE.trim().split('\n').filter(line => line.trim());
         questionsDE = linesDE.map(line => {
-            const parts = line.split('\t').map(part => part.trim());
+            // Try semicolon first, then tab (for compatibility)
+            let parts = line.split(';').map(part => part.trim());
+            if (parts.length < 3) {
+                parts = line.split('\t').map(part => part.trim());
+            }
+            
+            // Check for PNG filename at the end
+            let imagePath = null;
+            const nonEmptyParts = parts.filter(p => p);
+            const lastPart = nonEmptyParts[nonEmptyParts.length - 1];
+            const isPngFile = lastPart && /\.png$/i.test(lastPart);
+            
+            if (isPngFile) {
+                imagePath = `pictures/questions_pictures/${lastPart}`;
+                // Remove PNG from parts for processing
+                parts = parts.filter(p => !/\.png$/i.test(p));
+            }
+            
             if (parts.length >= 5) {
                 return {
                     question: parts[0],
                     correctAnswer: parts[1],
-                    options: [parts[1], parts[2], parts[3], parts[4]]
+                    correctAnswers: [parts[1]], // For compatibility
+                    options: [parts[1], parts[2], parts[3], parts[4]],
+                    imagePath: imagePath
                 };
             }
             return null;
@@ -209,12 +441,31 @@ async function loadQuestions() {
         // Parse English questions
         const linesEN = tsvTextEN.trim().split('\n').filter(line => line.trim());
         questionsEN = linesEN.map(line => {
-            const parts = line.split('\t').map(part => part.trim());
+            // Try semicolon first, then tab (for compatibility)
+            let parts = line.split(';').map(part => part.trim());
+            if (parts.length < 3) {
+                parts = line.split('\t').map(part => part.trim());
+            }
+            
+            // Check for PNG filename at the end
+            let imagePath = null;
+            const nonEmptyParts = parts.filter(p => p);
+            const lastPart = nonEmptyParts[nonEmptyParts.length - 1];
+            const isPngFile = lastPart && /\.png$/i.test(lastPart);
+            
+            if (isPngFile) {
+                imagePath = `pictures/questions_pictures/${lastPart}`;
+                // Remove PNG from parts for processing
+                parts = parts.filter(p => !/\.png$/i.test(p));
+            }
+            
             if (parts.length >= 5) {
                 return {
                     question: parts[0],
                     correctAnswer: parts[1],
-                    options: [parts[1], parts[2], parts[3], parts[4]]
+                    correctAnswers: [parts[1]], // For compatibility
+                    options: [parts[1], parts[2], parts[3], parts[4]],
+                    imagePath: imagePath
                 };
             }
             return null;
@@ -248,7 +499,7 @@ async function loadQuestions() {
             `<div class="error">
                 <h3>Fehler beim Laden der Fragen</h3>
                 <p>${error.message}</p>
-                <p>Stelle sicher, dass questions.tsv und questions_eng.tsv im gleichen Verzeichnis wie index.html existieren</p>
+                <p>Stelle sicher, dass questions/questions${selectedModule}.tsv und questions/questions_eng${selectedModule}.tsv existieren</p>
             </div>`;
     }
 }
@@ -367,6 +618,14 @@ function switchLanguage(lang) {
     // Update all UI text
     updateUIText();
     
+    // Check if we're on the results page
+    const resultsPage = document.getElementById('results');
+    if (resultsPage && resultsPage.style.display !== 'none') {
+        // We're on the results page, refresh the results content
+        showResults();
+        return;
+    }
+    
     // Check if we're on the feedback page
     const feedbackContainer = document.querySelector('.feedback-container');
     if (feedbackContainer) {
@@ -375,7 +634,7 @@ function switchLanguage(lang) {
         return;
     }
     
-    // If quiz has started and we're not on feedback page, refresh current question
+    // If quiz has started and we're not on feedback or results page, refresh current question
     if (document.querySelector('.quiz-container').classList.contains('quiz-started')) {
         displayQuestion();
     }
@@ -447,9 +706,14 @@ function displayQuestion() {
         return q;
     });
     
-    // Show "Fakahoot Quiz" title when displaying questions
+    // Show original title when displaying questions
     const titleElement = document.querySelector('.title');
-    if (titleElement) {
+    if (titleElement && selectedModule) {
+        if (selectedModule === 'final') {
+            titleElement.textContent = `🎯 Final Test 🎯`;
+        } else {
+            titleElement.textContent = `🎯 Modul ${selectedModule} Post-Test 🎯`;
+        }
         titleElement.style.display = 'block';
     }
     
@@ -469,8 +733,15 @@ function displayQuestion() {
     // Unicorns are created when questions are answered correctly, not here
     
     // Create question HTML with multi-select
+    const imageHTML = question.imagePath 
+        ? `<div class="question-image-container">
+            <img src="${question.imagePath}" alt="Question image" class="question-image" onerror="this.style.display='none'">
+           </div>`
+        : '';
+    
     const questionHTML = `
         <div class="question-container">
+            ${imageHTML}
             <div class="question-text">${question.question}</div>
             <div class="options-container">
                 ${question.options.map((option, index) => 
@@ -567,16 +838,30 @@ function submitAnswer() {
     });
     
     // Check if the answer is correct
-    // It's only correct if the user selected ONLY the correct answer (no wrong answers)
-    // Use trim() to handle any whitespace issues and ensure exact match
-    const hasCorrectAnswer = selectedAnswers.some(answer => answer.trim() === correctAnswer.trim());
-    const hasOnlyCorrectAnswer = selectedAnswers.length === 1 && hasCorrectAnswer;
-    const isCorrect = hasOnlyCorrectAnswer;
+    // Handle multiple correct answers if available
+    const correctAnswers = question.correctAnswers || [correctAnswer];
+    
+    // Check if user selected all correct answers and no incorrect ones
+    const selectedSet = new Set(selectedAnswers.map(a => a.trim()));
+    const correctSet = new Set(correctAnswers.map(a => a.trim()));
+    
+    const hasAllCorrect = correctAnswers.every(ca => selectedSet.has(ca.trim()));
+    const hasNoIncorrect = selectedAnswers.every(sa => correctSet.has(sa.trim()));
+    const isCorrect = hasAllCorrect && hasNoIncorrect && selectedAnswers.length === correctAnswers.length;
+    
+    // Mark all correct answers
+    allButtons.forEach(btn => {
+        const btnAnswer = btn.dataset.answer.trim();
+        if (correctAnswers.some(ca => ca.trim() === btnAnswer)) {
+            btn.classList.add('correct');
+        }
+    });
     
     // Mark selected answers
     allButtons.forEach(btn => {
         if (selectedAnswers.includes(btn.dataset.answer)) {
-            if (btn.dataset.answer === correctAnswer) {
+            const btnAnswer = btn.dataset.answer.trim();
+            if (correctAnswers.some(ca => ca.trim() === btnAnswer)) {
                 btn.classList.add('correct');
             } else {
                 btn.classList.add('incorrect');
@@ -620,7 +905,7 @@ function submitAnswer() {
     } else {
         lastAnswerWasCorrect = false;
         showCelebration('wrong');
-        createPoop();
+        createFrog();
     }
     
     // Show feedback after a short delay
@@ -658,6 +943,11 @@ async function sendQuestionDataToFirebase(questionInfo) {
             timestamp: new Date()
         };
         
+        // Add user_group if provided via URL parameter
+        if (userGroup) {
+            dataToSave.user_group = userGroup;
+        }
+        
         // Validate data structure
         if (typeof dataToSave.questionIndex !== 'number' || 
             typeof dataToSave.isCorrect !== 'boolean' ||
@@ -665,15 +955,25 @@ async function sendQuestionDataToFirebase(questionInfo) {
             throw new Error('Invalid data structure: ' + JSON.stringify(dataToSave));
         }
         
+        // Use appropriate collection name based on module
+        // For backward compatibility: modul 7 uses 'quizAnswers', others use 'modulX' or 'final'
+        let collectionName;
+        if (selectedModule === 'final') {
+            collectionName = 'final';
+        } else if (selectedModule === 7) {
+            collectionName = 'quizAnswers'; // Backward compatibility
+        } else {
+            collectionName = `modul${selectedModule}`;
+        }
         console.log('📤 Attempting to save to Firebase:');
-        console.log('  - Collection: quizAnswers');
+        console.log('  - Collection:', collectionName);
         console.log('  - Data:', dataToSave);
         console.log('  - Timestamp:', new Date().toISOString());
         
         const startTime = Date.now();
         
         // Create collection reference
-        const collectionRef = window.firebaseCollection(window.firebaseDB, 'quizAnswers');
+        const collectionRef = window.firebaseCollection(window.firebaseDB, collectionName);
         console.log('  - Collection reference created:', collectionRef);
         
         // Attempt to write document
@@ -682,7 +982,7 @@ async function sendQuestionDataToFirebase(questionInfo) {
         const duration = Date.now() - startTime;
         console.log('✅ Document successfully written!');
         console.log('  - Document ID:', docRef.id);
-        console.log('  - Full path: quizAnswers/' + docRef.id);
+        console.log('  - Full path: ' + collectionName + '/' + docRef.id);
         console.log('  - Response time:', duration + 'ms');
         console.log('  - Document reference:', docRef);
         
@@ -789,12 +1089,26 @@ function createUnicorn() {
     
     document.body.appendChild(unicorn);
     
-    // Generate random background positions (constrained to stay within bounds)
-    // Account for unicorn size - keep center at least 10% from edges to ensure fully visible
+    // Calculate right bottom corner position (50pt from border)
+    // Convert 50pt to vw/vh units (approximate: 1pt ≈ 1.33px, and we'll use calc for precision)
+    // For simplicity, we'll use fixed pixel positioning: right: 50px, bottom: 50px
+    // But we need to convert this to vw/vh for the animation system
+    // Get viewport dimensions to calculate percentage
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    // Position 50px from right edge: (viewportWidth - 50) / viewportWidth * 100 = percentage from left
+    // Position 50px from bottom edge: (viewportHeight - 50) / viewportHeight * 100 = percentage from top
+    const rightBottomX = ((viewportWidth - 50) / viewportWidth) * 100; // Percentage from left
+    const rightBottomY = ((viewportHeight - 50) / viewportHeight) * 100; // Percentage from top
+    
+    // Convert to the -50 to +50 range used by the animation system
+    // The system uses -50 to +50 where 0 is center, so we need to convert
+    const targetX = (rightBottomX + 30); // Convert 0-100 range to -50 to +50 range
+    const targetY = (rightBottomY + 30);
+    
+    // Generate random movement points for after it reaches the corner
     const minPos = -50;
     const maxPos = 50;
-    const startX = Math.random() * (maxPos - minPos) + minPos;
-    const startY = Math.random() * (maxPos - minPos) + minPos;
     const endX = Math.random() * (maxPos - minPos) + minPos;
     const endY = Math.random() * (maxPos - minPos) + minPos;
     const mid1X = Math.random() * (maxPos - minPos) + minPos;
@@ -803,14 +1117,14 @@ function createUnicorn() {
     const mid2Y = Math.random() * (maxPos - minPos) + minPos;
     const randomDuration = Math.random() * 4 + 6; // 6s to 10s (faster)
     
-    // After celebration, move to background with confetti effect
+    // After celebration, move to right bottom corner with confetti effect
     setTimeout(() => {
         // Create extra confetti for the move
         createUnicornConfetti();
         
-        // Set background animation properties
-        unicorn.style.setProperty('--start-x', startX + 'vw');
-        unicorn.style.setProperty('--start-y', startY + 'vh');
+        // Set background animation properties - always fly to right bottom corner
+        unicorn.style.setProperty('--start-x', targetX + 'vw');
+        unicorn.style.setProperty('--start-y', targetY + 'vh');
         unicorn.style.setProperty('--end-x', endX + 'vw');
         unicorn.style.setProperty('--end-y', endY + 'vh');
         unicorn.style.setProperty('--mid1-x', mid1X + 'vw');
@@ -818,13 +1132,13 @@ function createUnicorn() {
         unicorn.style.setProperty('--mid2-x', mid2X + 'vw');
         unicorn.style.setProperty('--mid2-y', mid2Y + 'vh');
         unicorn.style.setProperty('--duration', randomDuration + 's');
-        // Use full screen bounds (like poops) - convert from -50 to +50 range to 0-100 range
-        const clampedTargetX = Math.max(-50, Math.min(50, startX)) + 50; // Convert to 0-100 range
-        const clampedTargetY = Math.max(-50, Math.min(50, startY)) + 50; // Convert to 0-100 range
+        // Target is always right bottom corner
+        const clampedTargetX = Math.max(-50, Math.min(50, targetX)) + 50; // Convert to 0-100 range
+        const clampedTargetY = Math.max(-50, Math.min(50, targetY)) + 50; // Convert to 0-100 range
         unicorn.style.setProperty('--target-x', clampedTargetX + 'vw');
         unicorn.style.setProperty('--target-y', clampedTargetY + 'vh');
         
-        // Move to background
+        // Move to background (right bottom corner)
         unicorn.classList.remove('unicorn-spawning');
         unicorn.style.animation = 'unicornMoveToBackground 1.5s ease-out forwards';
         
@@ -839,23 +1153,24 @@ function createUnicorn() {
             unicorn.style.top = 'auto';
             unicorn.style.left = 'auto';
             
-            // Set initial position at the target location (where it just flew to)
-            // Use the same calculation as poop - convert from -50 to 50 range to actual position
-            const clampedStartX = Math.max(-50, Math.min(50, startX));
-            const clampedStartY = Math.max(-50, Math.min(50, startY));
+            // Set initial position at right bottom corner (50pt from border)
+            // Use transform system consistently - position at right bottom corner
+            const clampedStartX = Math.max(-50, Math.min(50, targetX));
+            const clampedStartY = Math.max(-50, Math.min(50, targetY));
             unicorn.style.transform = `translate(calc(${clampedStartX}vw - 50%), calc(${clampedStartY}vh - 50%)) rotate(0deg)`;
             
             // Wait 1 second after being added to the spot, then start moving animation
             setTimeout(() => {
-                // Start JavaScript-based animation with boundary bouncing (full screen like poops)
-                startUnicornAnimation(unicorn, startX, startY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, randomDuration);
+                // Start JavaScript-based animation with boundary bouncing
+                // Use targetX, targetY as starting point (right bottom corner)
+                startUnicornAnimation(unicorn, targetX, targetY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, randomDuration);
             }, 1000); // Wait 1 second after being added
         }, 1500); // After animation completes
     }, 2000); // After celebration ends
 }
 
 function startUnicornAnimation(unicorn, startX, startY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, duration) {
-    // Use full screen bounds to allow movement across entire screen (like poops)
+    // Use full screen bounds to allow movement across entire screen (like frogs)
     const minX = -50; // Minimum X position (vw) - allows full left side
     const maxX = 50; // Maximum X position (vw) - allows full right side
     const minY = -50; // Minimum Y position (vh)
@@ -988,30 +1303,40 @@ function createBattleConfetti(emoji, centerX, centerY) {
     }
 }
 
-function createPoop() {
-    const poop = document.createElement('div');
-    poop.className = 'unicorn unicorn-spawning';
-    poop.id = `poop-${Date.now()}`;
-    poop.textContent = '💩';
+function createFrog() {
+    const frog = document.createElement('div');
+    frog.className = 'unicorn unicorn-spawning';
+    frog.id = `frog-${Date.now()}`;
+    frog.textContent = '🐸';
     
     // Start at center of screen (below celebration text)
-    poop.style.position = 'fixed';
-    poop.style.top = '50%';
-    poop.style.left = '50%';
-    poop.style.transform = 'translate(-50%, -50%)';
-    poop.style.zIndex = '1';
-    poop.style.opacity = '0';
-    poop.style.fontSize = 'clamp(5em, 12vw, 8em)';
-    poop.style.filter = 'drop-shadow(0 0 20px rgba(139, 69, 19, 0.8))';
-    poop.style.animation = 'unicornSpawn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards';
+    frog.style.position = 'fixed';
+    frog.style.top = '50%';
+    frog.style.left = '50%';
+    frog.style.transform = 'translate(-50%, -50%)';
+    frog.style.zIndex = '1';
+    frog.style.opacity = '0';
+    frog.style.fontSize = 'clamp(5em, 12vw, 8em)';
+    frog.style.filter = 'drop-shadow(0 0 20px rgba(139, 69, 19, 0.8))';
+    frog.style.animation = 'unicornSpawn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards';
     
-    document.body.appendChild(poop);
+    document.body.appendChild(frog);
     
-    // Generate random background positions
+    // Calculate right bottom corner position (50pt from border)
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    // Position 50px from right edge: (viewportWidth - 50) / viewportWidth * 100 = percentage from left
+    // Position 50px from bottom edge: (viewportHeight - 50) / viewportHeight * 100 = percentage from top
+    const rightBottomX = ((viewportWidth - 50) / viewportWidth) * 100; // Percentage from left
+    const rightBottomY = ((viewportHeight - 50) / viewportHeight) * 100; // Percentage from top
+    
+    // Convert to the -50 to +50 range used by the animation system
+    const targetX = (rightBottomX - 50) * 2; // Convert 0-100 range to -50 to +50 range
+    const targetY = (rightBottomY - 50) * 2;
+    
+    // Generate random movement points for after it reaches the corner
     const minPos = -50;
     const maxPos = 50;
-    const startX = Math.random() * (maxPos - minPos) + minPos;
-    const startY = Math.random() * (maxPos - minPos) + minPos;
     const endX = Math.random() * (maxPos - minPos) + minPos;
     const endY = Math.random() * (maxPos - minPos) + minPos;
     const mid1X = Math.random() * (maxPos - minPos) + minPos;
@@ -1020,59 +1345,65 @@ function createPoop() {
     const mid2Y = Math.random() * (maxPos - minPos) + minPos;
     const randomDuration = Math.random() * 4 + 6;
     
-    // After celebration, move to background with poop confetti effect
+    // After celebration, move to right bottom corner with frog confetti effect
     setTimeout(() => {
-        // Create poop confetti for the move
-        createPoopConfetti();
+        // Create frog confetti for the move
+        createFrogConfetti();
         
-        // Set background animation properties
-        poop.style.setProperty('--start-x', startX + 'vw');
-        poop.style.setProperty('--start-y', startY + 'vh');
-        poop.style.setProperty('--end-x', endX + 'vw');
-        poop.style.setProperty('--end-y', endY + 'vh');
-        poop.style.setProperty('--mid1-x', mid1X + 'vw');
-        poop.style.setProperty('--mid1-y', mid1Y + 'vh');
-        poop.style.setProperty('--mid2-x', mid2X + 'vw');
-        poop.style.setProperty('--mid2-y', mid2Y + 'vh');
-        poop.style.setProperty('--duration', randomDuration + 's');
-        const clampedTargetX = Math.max(10, Math.min(90, startX));
-        const clampedTargetY = Math.max(10, Math.min(90, startY));
-        poop.style.setProperty('--target-x', clampedTargetX + 'vw');
-        poop.style.setProperty('--target-y', clampedTargetY + 'vh');
+        // Set background animation properties - always fly to right bottom corner
+        frog.style.setProperty('--start-x', targetX + 'vw');
+        frog.style.setProperty('--start-y', targetY + 'vh');
+        frog.style.setProperty('--end-x', endX + 'vw');
+        frog.style.setProperty('--end-y', endY + 'vh');
+        frog.style.setProperty('--mid1-x', mid1X + 'vw');
+        frog.style.setProperty('--mid1-y', mid1Y + 'vh');
+        frog.style.setProperty('--mid2-x', mid2X + 'vw');
+        frog.style.setProperty('--mid2-y', mid2Y + 'vh');
+        frog.style.setProperty('--duration', randomDuration + 's');
+        // Target is always right bottom corner
+        const clampedTargetX = Math.max(-50, Math.min(50, targetX)) + 50; // Convert to 0-100 range
+        const clampedTargetY = Math.max(-50, Math.min(50, targetY)) + 50; // Convert to 0-100 range
+        frog.style.setProperty('--target-x', clampedTargetX + 'vw');
+        frog.style.setProperty('--target-y', clampedTargetY + 'vh');
         
-        // Move to background
-        poop.classList.remove('unicorn-spawning');
-        poop.style.animation = 'unicornMoveToBackground 1.5s ease-out forwards';
+        // Move to background (right bottom corner)
+        frog.classList.remove('unicorn-spawning');
+        frog.style.animation = 'unicornMoveToBackground 1.5s ease-out forwards';
         
-        // After moving to background, start the continuous movement
+        // After moving to background, wait 1 second, then start the continuous movement
         setTimeout(() => {
-            poop.style.animation = 'none';
-            poop.style.zIndex = '0';
-            poop.style.opacity = '0.25';
-            poop.style.filter = 'blur(0.5px)';
-            poop.style.fontSize = 'clamp(4em, 10vw, 6em)';
-            poop.style.top = 'auto';
-            poop.style.left = 'auto';
+            frog.style.animation = 'none';
+            frog.style.zIndex = '0';
+            frog.style.opacity = '0.25';
+            frog.style.filter = 'blur(0.5px)';
+            frog.style.fontSize = 'clamp(4em, 10vw, 6em)';
             
-            const clampedStartX = Math.max(10, Math.min(90, startX));
-            const clampedStartY = Math.max(10, Math.min(90, startY));
-            poop.style.transform = `translate(calc(${clampedStartX}vw - 50%), calc(${clampedStartY}vh - 50%)) rotate(0deg)`;
+            // Set initial position at right bottom corner (50pt from border)
+            // Use transform system consistently - position at right bottom corner
+            const clampedStartX = Math.max(-50, Math.min(50, targetX));
+            const clampedStartY = Math.max(-50, Math.min(50, targetY));
+            frog.style.transform = `translate(calc(${clampedStartX}vw - 50%), calc(${clampedStartY}vh - 50%)) rotate(0deg)`;
             
-            startUnicornAnimation(poop, startX, startY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, randomDuration);
+            // Wait 1 second after being added to the spot, then start moving animation
+            setTimeout(() => {
+                // Start JavaScript-based animation
+                // Use targetX, targetY as starting point (right bottom corner)
+                startUnicornAnimation(frog, targetX, targetY, endX, endY, mid1X, mid1Y, mid2X, mid2Y, randomDuration);
+            }, 1000); // Wait 1 second after being added
         }, 1500);
     }, 2000);
 }
 
-function createPoopConfetti() {
+function createFrogConfetti() {
     for (let i = 0; i < 40; i++) {
-        const poopConfetti = document.createElement('div');
-        poopConfetti.style.position = 'fixed';
-        poopConfetti.style.left = '50%';
-        poopConfetti.style.top = '50%';
-        poopConfetti.style.fontSize = '1.5em';
-        poopConfetti.style.pointerEvents = 'none';
-        poopConfetti.style.zIndex = '1003';
-        poopConfetti.textContent = '💩';
+        const frogConfetti = document.createElement('div');
+        frogConfetti.style.position = 'fixed';
+        frogConfetti.style.left = '50%';
+        frogConfetti.style.top = '50%';
+        frogConfetti.style.fontSize = '1.5em';
+        frogConfetti.style.pointerEvents = 'none';
+        frogConfetti.style.zIndex = '1003';
+        frogConfetti.textContent = '🐸';
         
         const angle = (Math.PI * 2 * i) / 40;
         const distance = 250 + Math.random() * 150;
@@ -1080,42 +1411,41 @@ function createPoopConfetti() {
         const y = Math.sin(angle) * distance;
         const delay = Math.random() * 0.3;
         
-        poopConfetti.style.setProperty('--x', x + 'px');
-        poopConfetti.style.setProperty('--y', y + 'px');
-        poopConfetti.style.animation = `unicornConfettiBurst 1.5s ease-out ${delay}s forwards`;
+        frogConfetti.style.setProperty('--x', x + 'px');
+        frogConfetti.style.setProperty('--y', y + 'px');
+        frogConfetti.style.animation = `unicornConfettiBurst 1.5s ease-out ${delay}s forwards`;
         
-        document.body.appendChild(poopConfetti);
+        document.body.appendChild(frogConfetti);
         
         // Remove after animation
-        setTimeout(() => poopConfetti.remove(), 2000);
+        setTimeout(() => frogConfetti.remove(), 2000);
     }
 }
 
 function showFeedback() {
-    // Hide only the "Fakahoot Quiz" title, keep progress bar visible
+    // Update the title to show feedback title above progress bar
     const titleElement = document.querySelector('.title');
-    if (titleElement) {
-        titleElement.style.display = 'none';
-    }
-    
     const feedback = feedbacks[currentQuestionIndex] || {
         title: 'Feedback',
         explanation: t('noFeedback'),
         source: ''
     };
+    if (titleElement) {
+        titleElement.textContent = feedback.title;
+        titleElement.style.display = 'block';
+    }
     
     const questionNumber = currentQuestionIndex + 1;
-    // Try multiple image extensions (png, jpg, jpeg, svg, webp, gif)
-    const imageExtensions = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'];
-    const baseImagePath = `pictures/q${questionNumber}`;
+    // Try multiple image extensions (both lowercase and uppercase variants)
+    const imageExtensions = ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'svg', 'SVG', 'webp', 'WEBP', 'gif', 'GIF'];
+    const baseImagePath = selectedModule === 'final' ? `pictures/final/q${questionNumber}` : `pictures/modul${selectedModule}/q${questionNumber}`;
     
     const feedbackHTML = `
         <div class="feedback-container">
-            <h2 class="feedback-title">🍋 ${feedback.title} 🍋</h2>
             <div class="feedback-content-wrapper">
                 <div class="feedback-image-container">
-                    <img src="" alt="Feedback image" class="feedback-image" id="feedbackImg${currentQuestionIndex}">
-                    <div class="feedback-unicorn-fallback" id="unicornFallback${currentQuestionIndex}" style="display: none;">🦄</div>
+                    <div class="feedback-unicorn-fallback" id="unicornFallback${currentQuestionIndex}">🦄</div>
+                    <img src="" alt="Feedback image" class="feedback-image" id="feedbackImg${currentQuestionIndex}" style="display: none;">
                 </div>
                 <div class="feedback-text-container">
                     <div class="feedback-explanation">${feedback.explanation}</div>
@@ -1138,25 +1468,23 @@ function showFeedback() {
             if (imageLoaded) return; // Already found a working image
             
             if (currentExtensionIndex >= imageExtensions.length) {
-                // All extensions failed, show fallback
-                img.style.display = 'none';
-                const fallback = document.getElementById(`unicornFallback${currentQuestionIndex}`);
-                if (fallback) {
-                    fallback.style.display = 'flex';
-                }
+                // All extensions failed, keep unicorn visible
+                imageLoaded = false;
                 return;
             }
             
             const extension = imageExtensions[currentExtensionIndex];
-            const testSrc = `${baseImagePath}.${extension}`;
+            // Add cache-busting parameter to force browser to check for new version
+            const cacheBuster = `?v=${Date.now()}`;
+            const testSrc = `${baseImagePath}.${extension}${cacheBuster}`;
             
             // Create a test image to check if it exists
             const testImg = new Image();
             testImg.onload = function() {
                 if (!imageLoaded) {
                     imageLoaded = true;
+                    // Use the same cache-busted URL for the actual image
                     img.src = testSrc;
-                    img.style.display = 'block';
                 }
             };
             testImg.onerror = function() {
@@ -1175,8 +1503,12 @@ function showFeedback() {
         };
         
         img.onload = function() {
-            // Image loaded successfully
+            // Image loaded successfully - hide unicorn and show image
             imageLoaded = true;
+            const fallback = document.getElementById(`unicornFallback${currentQuestionIndex}`);
+            if (fallback) {
+                fallback.style.display = 'none';
+            }
             this.style.display = 'block';
         };
         
@@ -1184,12 +1516,12 @@ function showFeedback() {
         tryNextExtension();
     }
     
-    // Start raining unicorns or poops based on answer
+    // Start raining unicorns or frogs based on answer
     startFeedbackRain();
 }
 
 function startFeedbackRain() {
-    const emoji = lastAnswerWasCorrect ? '🦄' : '💩';
+    const emoji = lastAnswerWasCorrect ? '🦄' : '🐸';
     const rainContainer = document.createElement('div');
     rainContainer.className = 'feedback-rain';
     rainContainer.style.position = 'fixed';
@@ -1294,15 +1626,15 @@ function showBattleAnimation() {
             unicornArmy.appendChild(unicorn);
         }
         
-        // Create poop army on the right
-        const poopArmy = document.getElementById('poopArmy');
-        poopArmy.innerHTML = '';
+        // Create frog army on the right
+        const frogArmy = document.getElementById('frogArmy');
+        frogArmy.innerHTML = '';
         for (let i = 0; i < wrongCount; i++) {
-            const poop = document.createElement('div');
-            poop.className = 'battle-poop';
-            poop.textContent = '💩';
-            poop.style.animationDelay = `${i * 0.1}s`;
-            poopArmy.appendChild(poop);
+            const frog = document.createElement('div');
+            frog.className = 'battle-frog';
+            frog.textContent = '🐸';
+            frog.style.animationDelay = `${i * 0.1}s`;
+            frogArmy.appendChild(frog);
         }
         
         // After spawn animation completes, keep static icons where they are
@@ -1313,9 +1645,9 @@ function showBattleAnimation() {
         
         setTimeout(() => {
             // Freeze static icons in their current position - no movement, just stay where they spawned
-            // Process unicorns and poops separately to ensure both are handled correctly
+            // Process unicorns and frogs separately to ensure both are handled correctly
             const unicornIcons = document.querySelectorAll('.battle-unicorn:not(.battle-chaos)');
-            const poopIcons = document.querySelectorAll('.battle-poop:not(.battle-chaos)');
+            const frogIcons = document.querySelectorAll('.battle-frog:not(.battle-chaos)');
             
             // Process unicorns - move them to body to avoid parent container issues
             unicornIcons.forEach((el, index) => {
@@ -1347,8 +1679,8 @@ function showBattleAnimation() {
                 }, index * 10);
             });
             
-            // Process poops - move them to body to avoid parent container issues (same as unicorns)
-            poopIcons.forEach((el, index) => {
+            // Process frogs - move them to body to avoid parent container issues (same as unicorns)
+            frogIcons.forEach((el, index) => {
                 setTimeout(() => {
                     // Check if element still exists
                     if (!el.parentElement) return;
@@ -1377,7 +1709,7 @@ function showBattleAnimation() {
             });
             
             // Also set up a periodic check to ensure static icons stay visible
-            // Check unicorns and poops separately to ensure both are protected
+            // Check unicorns and frogs separately to ensure both are protected
             const protectStaticIcons = setInterval(() => {
                 // Protect unicorns specifically
                 document.querySelectorAll('.battle-unicorn:not(.battle-chaos)').forEach(el => {
@@ -1388,8 +1720,8 @@ function showBattleAnimation() {
                     el.classList.add('battle-static');
                 });
                 
-                // Protect poops specifically
-                document.querySelectorAll('.battle-poop:not(.battle-chaos)').forEach(el => {
+                // Protect frogs specifically
+                document.querySelectorAll('.battle-frog:not(.battle-chaos)').forEach(el => {
                     el.style.opacity = '1';
                     el.style.display = 'block';
                     el.style.visibility = 'visible';
@@ -1419,10 +1751,10 @@ function showBattleAnimation() {
                 const centerX = animRect.left + animRect.width / 2;
                 const centerY = animRect.top + animRect.height / 2;
                 
-                // Start confetti effect for rotating icons (alternating unicorn/poop every 0.4s)
-                let confettiToggle = true; // true = unicorn, false = poop
+                // Start confetti effect for rotating icons (alternating unicorn/frog every 0.4s)
+                let confettiToggle = true; // true = unicorn, false = frog
                 const confettiInterval = setInterval(() => {
-                    const emoji = confettiToggle ? '🦄' : '💩';
+                    const emoji = confettiToggle ? '🦄' : '🐸';
                     createBattleConfetti(emoji, centerX, centerY);
                     confettiToggle = !confettiToggle;
                 }, 400);
@@ -1467,11 +1799,11 @@ function showBattleAnimation() {
                     void rotatingUnicorn.offsetHeight;
                 }
                 
-                // Create NEW rotating poops (slightly to the right of center)
+                // Create NEW rotating frogs (slightly to the right of center)
                 for (let i = 0; i < wrongCount; i++) {
-                    const rotatingPoop = document.createElement('div');
-                    rotatingPoop.className = 'battle-poop battle-chaos';
-                    rotatingPoop.textContent = '💩';
+                    const rotatingFrog = document.createElement('div');
+                    rotatingFrog.className = 'battle-frog battle-chaos';
+                    rotatingFrog.textContent = '🐸';
                     
                     // Position slightly to the right of center with random offset
                     // Use larger offsets to spread them out more
@@ -1480,31 +1812,31 @@ function showBattleAnimation() {
                     const randomY = (Math.random() - 0.5) * 60; // Random -30 to +30px
                     
                     // Set position using inline styles - but don't override transform (let animation handle it)
-                    const poopLeft = centerX + rightOffset + randomX;
-                    const poopTop = centerY + randomY;
-                    rotatingPoop.style.position = 'fixed';
-                    rotatingPoop.style.left = poopLeft + 'px';
-                    rotatingPoop.style.top = poopTop + 'px';
-                    rotatingPoop.style.animationDelay = `${i * 0.05}s`;
-                    rotatingPoop.style.zIndex = '50';
-                    rotatingPoop.style.willChange = 'transform';
-                    rotatingPoop.style.opacity = '1';
+                    const frogLeft = centerX + rightOffset + randomX;
+                    const frogTop = centerY + randomY;
+                    rotatingFrog.style.position = 'fixed';
+                    rotatingFrog.style.left = frogLeft + 'px';
+                    rotatingFrog.style.top = frogTop + 'px';
+                    rotatingFrog.style.animationDelay = `${i * 0.05}s`;
+                    rotatingFrog.style.zIndex = '50';
+                    rotatingFrog.style.willChange = 'transform';
+                    rotatingFrog.style.opacity = '1';
                     // Don't set transform here - let the CSS animation handle it
                     
                     // Set chaos direction (positive for right side)
-                    rotatingPoop.style.setProperty('--chaos-x', '1');
-                    rotatingPoop.style.setProperty('--chaos-y', (Math.random() - 0.5) * 2);
+                    rotatingFrog.style.setProperty('--chaos-x', '1');
+                    rotatingFrog.style.setProperty('--chaos-y', (Math.random() - 0.5) * 2);
                     
-                    battleAnimation.appendChild(rotatingPoop);
+                    battleAnimation.appendChild(rotatingFrog);
                     
                     // Force reflow to ensure animation starts
-                    void rotatingPoop.offsetHeight;
+                    void rotatingFrog.offsetHeight;
                 }
                 
                 // After chaos, some rotating units die (only the rotating ones, not the static ones)
                 setTimeout(() => {
                     // Only select rotating units (those with battle-chaos class)
-                    const allRotatingUnits = Array.from(document.querySelectorAll('.battle-unicorn.battle-chaos, .battle-poop.battle-chaos'));
+                    const allRotatingUnits = Array.from(document.querySelectorAll('.battle-unicorn.battle-chaos, .battle-frog.battle-chaos'));
                     // Randomly select some to die (about 30-50% of them)
                     const deathCount = Math.floor(allRotatingUnits.length * (0.3 + Math.random() * 0.2));
                     const shuffled = [...allRotatingUnits].sort(() => Math.random() - 0.5);
@@ -1525,23 +1857,23 @@ function showBattleAnimation() {
                     
                     // Show winner slowly fading in after deaths, and fade out remaining rotating units
                     setTimeout(() => {
-                        const winner = correctCount > wrongCount ? 'unicorn' : wrongCount > correctCount ? 'poop' : 'tie';
+                        const winner = correctCount > wrongCount ? 'unicorn' : wrongCount > correctCount ? 'frog' : 'tie';
                         const winnerEmoji = document.getElementById('winnerEmoji');
                         const winnerText = document.getElementById('winnerText');
                         
                         if (winner === 'unicorn') {
                             winnerEmoji.textContent = '🦄';
                             winnerText.textContent = t('unicornsWin');
-                        } else if (winner === 'poop') {
-                            winnerEmoji.textContent = '💩';
-                            winnerText.textContent = t('poopsWin');
+                        } else if (winner === 'frog') {
+                            winnerEmoji.textContent = '🐸';
+                            winnerText.textContent = t('frogsWin');
                         } else {
                             winnerEmoji.textContent = '🤝';
                             winnerText.textContent = t('tie');
                         }
                         
                         // First, protect ALL static icons - make absolutely sure they stay visible
-                        // Process unicorns and poops separately to ensure both are protected
+                        // Process unicorns and frogs separately to ensure both are protected
                         
                         // Protect unicorns specifically
                         document.querySelectorAll('.battle-unicorn:not(.battle-chaos)').forEach((el) => {
@@ -1554,8 +1886,8 @@ function showBattleAnimation() {
                             void el.offsetHeight; // Force re-render
                         });
                         
-                        // Protect poops specifically
-                        document.querySelectorAll('.battle-poop:not(.battle-chaos)').forEach((el) => {
+                        // Protect frogs specifically
+                        document.querySelectorAll('.battle-frog:not(.battle-chaos)').forEach((el) => {
                             el.style.opacity = '1';
                             el.style.animation = 'none';
                             el.style.display = 'block';
@@ -1575,7 +1907,7 @@ function showBattleAnimation() {
                         });
                         
                         // Now fade out ONLY rotating units (those with battle-chaos class)
-                        document.querySelectorAll('.battle-unicorn.battle-chaos, .battle-poop.battle-chaos').forEach(el => {
+                        document.querySelectorAll('.battle-unicorn.battle-chaos, .battle-frog.battle-chaos').forEach(el => {
                             // Double check it's not a static icon
                             if (!el.classList.contains('battle-static')) {
                                 el.classList.add('battle-fade-out');
@@ -1609,12 +1941,17 @@ function showBattleAnimation() {
     }, 3000);
 }
 
+function skipBattle() {
+    // Immediately skip to results
+    showResults();
+}
+
 function showResults() {
     // Hide battle animation
     document.getElementById('battleAnimation').style.display = 'none';
     
-    // Remove all static battle army icons (unicorns and poops from the final battle)
-    document.querySelectorAll('.battle-static, .battle-unicorn:not(.battle-chaos), .battle-poop:not(.battle-chaos)').forEach(el => {
+    // Remove all static battle army icons (unicorns and frogs from the final battle)
+    document.querySelectorAll('.battle-static, .battle-unicorn:not(.battle-chaos), .battle-frog:not(.battle-chaos)').forEach(el => {
         el.remove();
     });
     
@@ -1644,14 +1981,23 @@ function showResults() {
         allSuccessful: allSuccessful
     });
     
+    // Update title to show "Quiz abgeschlossen" above progress bar
+    const titleElement = document.querySelector('.title');
+    if (titleElement) {
+        titleElement.textContent = t('quizComplete');
+        titleElement.style.display = 'block';
+    }
+    
     document.getElementById('scoreDisplay').innerHTML = `
         <div class="score-emoji">${emoji}</div>
         <div class="score-text">${t('youScored', score, questions.length)}</div>
         <div class="score-percentage">${percentage}%</div>
         <div class="firebase-message">${firebaseMessage}</div>
-        <div class="firebase-details" style="margin-top: 10px; font-size: 0.9em; color: #666;">
-            <div>${t('firebaseStatus', firebaseSuccessCount, firebaseFailureCount)}</div>
-            <div style="margin-top: 5px;">${t('checkConsole')}</div>
+        <div class="firebase-details" style="margin-top: 10px; font-size: 0.65em; color: #666;">
+            ${allSuccessful ? 
+                `<div>${t('firebaseAllSuccessMessage')}</div>` : 
+                `<div>${t('firebaseNotAllSuccessMessage')}</div>`
+            }
         </div>
     `;
     document.getElementById('results').style.display = 'block';
@@ -1760,12 +2106,51 @@ function handleNicknameSubmit() {
     showStartScreen();
 }
 
+// Get URL parameter value
+function getURLParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+}
+
 // Restart quiz
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadQuestions();
+    // Check for modul parameter in URL (supports 1-9 and 'final')
+    const modulParam = getURLParameter('modul');
+    const finalParam = getURLParameter('final');
+    
+    // Get user_group from URL parameter
+    const userGroupParam = getURLParameter('user_group');
+    if (userGroupParam) {
+        userGroup = userGroupParam;
+        console.log(`🔗 URL parameter detected: user_group=${userGroup}`);
+    }
+    
+    if (finalParam !== null) {
+        console.log(`🔗 URL parameter detected: final`);
+        // Automatically select the final module
+        selectModule('final');
+    } else if (modulParam) {
+        // Support modules 1-9
+        const moduleNumber = parseInt(modulParam);
+        if (!isNaN(moduleNumber) && moduleNumber >= 1 && moduleNumber <= 9) {
+            console.log(`🔗 URL parameter detected: modul=${moduleNumber}`);
+            // Automatically select the module
+            selectModule(moduleNumber);
+        } else {
+            console.warn(`⚠️ Invalid modul parameter: ${modulParam}. Must be 1-9.`);
+            // Show module selection screen if invalid parameter
+            document.getElementById('moduleSelectionScreen').style.display = 'block';
+        }
+    } else {
+        // Show module selection screen if no valid parameter
+        document.getElementById('moduleSelectionScreen').style.display = 'block';
+    }
     
     // Initialize language toggle buttons
     document.getElementById('langBtnDE').classList.add('active');
+    
+    // Initialize UI text (including credits)
+    updateUIText();
     
     // Add nickname submit handler
     document.getElementById('nicknameSubmitBtn').addEventListener('click', handleNicknameSubmit);
@@ -1960,10 +2345,12 @@ document.addEventListener('mozfullscreenchange', updateFullscreenButton);
 document.addEventListener('MSFullscreenChange', updateFullscreenButton);
 
 // Make functions globally available
+window.selectModule = selectModule;
 window.flipToCredits = flipToCredits;
 window.flipToQuiz = flipToQuiz;
 window.showCreditsFromResults = showCreditsFromResults;
 window.hideCreditsFromResults = hideCreditsFromResults;
 window.switchLanguage = switchLanguage;
 window.toggleFullscreen = toggleFullscreen;
+window.skipBattle = skipBattle;
 

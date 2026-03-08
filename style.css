@@ -333,6 +333,71 @@ body {
     transform: rotateY(180deg);
 }
 
+.module-selection-screen {
+    text-align: center;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.module-selection-title {
+    font-size: clamp(1.8em, 5vw, 2.5em);
+    color: #667eea;
+    margin-bottom: 40px;
+    font-weight: bold;
+}
+
+.module-buttons-container {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.module-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+    background-size: 200% 200%;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 40px 60px;
+    font-size: clamp(1.2em, 4vw, 1.8em);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    min-width: 200px;
+    animation: gradientShift 3s ease infinite;
+}
+
+.module-btn:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+    background-position: 100% 50%;
+}
+
+.module-btn:active {
+    transform: translateY(-4px) scale(0.98);
+}
+
+.module-number {
+    font-size: clamp(2.5em, 8vw, 4em);
+    font-weight: bold;
+    line-height: 1;
+}
+
+.module-label {
+    font-size: clamp(1em, 3vw, 1.3em);
+    font-weight: 600;
+}
+
 .nickname-screen {
     text-align: center;
     padding: 40px 20px;
@@ -539,8 +604,23 @@ body {
     }
 }
 
+.question-image-container {
+    margin-bottom: clamp(10px, 2vh, 20px);
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.question-image {
+    max-width: 100%;
+    max-height: 40vh;
+    height: auto;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    object-fit: contain;
+}
+
 .question-text {
-    font-size: clamp(1.2em, 4vw, 2em);
+    font-size: clamp(0.7em, calc(4vw - 0.5em), 1.5em);
     color: #333;
     margin-bottom: clamp(10px, 2vh, 20px);
     text-align: center;
@@ -568,7 +648,7 @@ body {
 
 .option-btn {
     padding: clamp(10px, 2vh, 15px) clamp(15px, 3vw, 20px);
-    font-size: clamp(0.9em, 2.5vw, 1.3em);
+    font-size: clamp(0.65em, calc(2.5vw - 0.25em), 1.05em);
     border: none;
     border-radius: 15px;
     cursor: pointer;
@@ -895,7 +975,7 @@ body {
 }
 
 .results h2 {
-    font-size: 2.5em;
+    font-size: 2.25em;
     color: #333;
     margin-bottom: 30px;
     background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #f9ca24);
@@ -907,7 +987,7 @@ body {
 }
 
 .score-display {
-    font-size: 1.5em;
+    font-size: 1.25em;
     font-weight: bold;
     margin: 30px 0;
     padding: 30px;
@@ -917,23 +997,23 @@ body {
 }
 
 .score-emoji {
-    font-size: 1.5em;
+    font-size: 1.25em;
     margin-bottom: 10px;
 }
 
 .score-text {
-    font-size: 1.5em;
+    font-size: 1.25em;
     margin-bottom: 10px;
 }
 
 .score-percentage {
-    font-size: 1.5em;
+    font-size: 1.25em;
     margin-bottom: 10px;
 }
 
 .download-btn {
     padding: 15px 40px;
-    font-size: 1.3em;
+    font-size: 1.05em;
     background: linear-gradient(135deg, #4ecdc4, #44a08d);
     color: white;
     border: none;
@@ -959,7 +1039,7 @@ body {
     padding: 15px;
     background: rgba(102, 126, 234, 0.1);
     border-radius: 10px;
-    font-size: clamp(0.45em, 1vw, 0.55em);
+    font-size: clamp(0.2em, calc(1vw - 0.25em), 0.3em);
     color: #555;
     line-height: 1.6;
     max-width: 600px;
@@ -1064,7 +1144,7 @@ body {
     padding: 0 10%;
 }
 
-.unicorn-army, .poop-army {
+.unicorn-army, .frog-army {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -1072,7 +1152,7 @@ body {
     justify-content: center;
 }
 
-.battle-unicorn, .battle-poop {
+.battle-unicorn, .battle-frog {
     font-size: clamp(3em, 6vw, 5em);
     animation: spawnIn 0.5s ease-out forwards;
     opacity: 0;
@@ -1109,7 +1189,7 @@ body {
     --direction: 1;
 }
 
-.battle-poop.battle-charge {
+.battle-frog.battle-charge {
     --direction: -1;
 }
 
@@ -1134,7 +1214,7 @@ body {
     --direction: 1;
 }
 
-.battle-poop.battle-move-to-center {
+.battle-frog.battle-move-to-center {
     --direction: -1;
 }
 
@@ -1215,7 +1295,7 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 200;
+    z-index: 20000;
     text-align: center;
     opacity: 0;
     animation: winnerFadeIn 3s ease-in forwards;
@@ -1260,6 +1340,32 @@ body {
     text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
     margin-top: 20px;
     animation: fadeIn 1s ease-in 0.5s both;
+}
+
+.skip-battle-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    font-size: 1.1em;
+    background: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.skip-battle-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .next-to-results-btn {
@@ -1366,7 +1472,7 @@ body {
 }
 
 .feedback-source {
-    font-size: clamp(0.9em, 2vw, 1.1em);
+    font-size: clamp(0.65em, calc(2vw - 0.25em), 0.85em);
     color: #888;
     text-align: left;
     font-style: italic;
@@ -1383,12 +1489,12 @@ body {
     }
     
     .question-text {
-        font-size: clamp(1.2em, 5vw, 1.8em);
+        font-size: clamp(0.7em, calc(5vw - 0.5em), 1.3em);
         padding: 15px;
     }
     
     .option-btn {
-        font-size: clamp(0.9em, 4vw, 1.2em);
+        font-size: clamp(0.65em, calc(4vw - 0.25em), 0.95em);
         padding: 12px 15px;
         min-height: 50px;
     }
@@ -1465,7 +1571,7 @@ body {
     right: 20px;
     color: #667eea;
     text-decoration: none;
-    font-size: 0.9em;
+    font-size: 0.65em;
     transition: color 0.3s ease;
     cursor: pointer;
 }
