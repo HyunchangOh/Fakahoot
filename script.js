@@ -610,17 +610,18 @@ function switchLanguage(lang) {
         if (questionShuffleOrder[idx]) {
             // Apply stored shuffle order
             const shuffleOrder = questionShuffleOrder[idx];
-            const shuffledOptions = shuffleOrder.map(orderIdx => q.options[orderIdx]);
+            const shuffledOptions = shuffleOrder.map(orderIdx => q.options[orderIdx]).filter(opt => opt !== undefined && opt !== null);
             return {
                 ...q,
                 options: shuffledOptions
             };
         } else {
-            // If no shuffle order exists yet, create one and store it
-            const indices = [0, 1, 2, 3];
+            // If no shuffle order exists yet, create one and store it based on actual number of options
+            const numOptions = q.options.length;
+            const indices = Array.from({ length: numOptions }, (_, i) => i);
             const newShuffleOrder = indices.sort(() => Math.random() - 0.5);
             questionShuffleOrder[idx] = newShuffleOrder;
-            const shuffledOptions = newShuffleOrder.map(orderIdx => q.options[orderIdx]);
+            const shuffledOptions = newShuffleOrder.map(orderIdx => q.options[orderIdx]).filter(opt => opt !== undefined && opt !== null);
             return {
                 ...q,
                 options: shuffledOptions
@@ -698,18 +699,19 @@ function displayQuestion() {
     
     // Get the base questions for current language
     const baseQuestions = currentLanguage === 'de' ? questionsDE : questionsEN;
+    const baseQuestion = baseQuestions[currentQuestionIndex];
     
     // If we don't have a shuffle order for this question yet, create one
     if (!questionShuffleOrder[currentQuestionIndex]) {
-        // Create a random shuffle order (array of indices)
-        const indices = [0, 1, 2, 3];
+        // Create a random shuffle order (array of indices) based on actual number of options
+        const numOptions = baseQuestion.options.length;
+        const indices = Array.from({ length: numOptions }, (_, i) => i);
         questionShuffleOrder[currentQuestionIndex] = indices.sort(() => Math.random() - 0.5);
     }
     
     // Apply the stored shuffle order to maintain consistency across languages
     const shuffleOrder = questionShuffleOrder[currentQuestionIndex];
-    const baseQuestion = baseQuestions[currentQuestionIndex];
-    const shuffledOptions = shuffleOrder.map(idx => baseQuestion.options[idx]);
+    const shuffledOptions = shuffleOrder.map(idx => baseQuestion.options[idx]).filter(opt => opt !== undefined && opt !== null);
     
     // Update questions array with shuffled options
     questions = baseQuestions.map((q, idx) => {
@@ -760,7 +762,7 @@ function displayQuestion() {
             ${imageHTML}
             <div class="question-text">${question.question}</div>
             <div class="options-container">
-                ${question.options.map((option, index) => 
+                ${question.options.filter(opt => opt && opt.trim()).map((option, index) => 
                     `<button class="option-btn" data-answer="${option}">${option}</button>`
                 ).join('')}
             </div>
