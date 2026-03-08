@@ -426,14 +426,22 @@ async function loadQuestions() {
                 parts = parts.filter(p => !/\.png$/i.test(p));
             }
             
-            if (parts.length >= 5) {
-                return {
-                    question: parts[0],
-                    correctAnswer: parts[1],
-                    correctAnswers: [parts[1]], // For compatibility
-                    options: [parts[1], parts[2], parts[3], parts[4]],
-                    imagePath: imagePath
-                };
+            // Require at least question + 2 options (minimum 3 parts)
+            if (parts.length >= 3) {
+                const question = parts[0];
+                const correctAnswer = parts[1];
+                // Get all available options (parts 1 onwards, excluding empty parts)
+                const options = parts.slice(1).filter(p => p && p.trim());
+                
+                if (options.length >= 2) {
+                    return {
+                        question: question,
+                        correctAnswer: correctAnswer,
+                        correctAnswers: [correctAnswer], // For compatibility
+                        options: options,
+                        imagePath: imagePath
+                    };
+                }
             }
             return null;
         }).filter(q => q !== null);
@@ -459,14 +467,22 @@ async function loadQuestions() {
                 parts = parts.filter(p => !/\.png$/i.test(p));
             }
             
-            if (parts.length >= 5) {
-                return {
-                    question: parts[0],
-                    correctAnswer: parts[1],
-                    correctAnswers: [parts[1]], // For compatibility
-                    options: [parts[1], parts[2], parts[3], parts[4]],
-                    imagePath: imagePath
-                };
+            // Require at least question + 2 options (minimum 3 parts)
+            if (parts.length >= 3) {
+                const question = parts[0];
+                const correctAnswer = parts[1];
+                // Get all available options (parts 1 onwards, excluding empty parts)
+                const options = parts.slice(1).filter(p => p && p.trim());
+                
+                if (options.length >= 2) {
+                    return {
+                        question: question,
+                        correctAnswer: correctAnswer,
+                        correctAnswers: [correctAnswer], // For compatibility
+                        options: options,
+                        imagePath: imagePath
+                    };
+                }
             }
             return null;
         }).filter(q => q !== null);
