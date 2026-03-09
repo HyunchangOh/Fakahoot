@@ -138,7 +138,7 @@ function selectModule(moduleNumber) {
 
 // Load feedback data from TSV files (both German and English)
 async function loadFeedbacks() {
-    if (!selectedModule) {
+    if (selectedModule === null || selectedModule === undefined) {
         console.error('No module selected');
         return;
     }
@@ -215,7 +215,7 @@ async function loadFeedbacks() {
 
 // Load questions from TSV files (both German and English)
 async function loadQuestions() {
-    if (!selectedModule) {
+    if (selectedModule === null || selectedModule === undefined) {
         console.error('No module selected');
         return;
     }
