@@ -2155,14 +2155,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Automatically select the final module
         selectModule('final');
     } else if (modulParam) {
-        // Support modules 1-9
+        // Support modules 0-10
         const moduleNumber = parseInt(modulParam);
-        if (!isNaN(moduleNumber) && moduleNumber >= 1 && moduleNumber <= 9) {
+        if (!isNaN(moduleNumber) && moduleNumber >= 0 && moduleNumber <= 10) {
             console.log(`🔗 URL parameter detected: modul=${moduleNumber}`);
             // Automatically select the module
             selectModule(moduleNumber);
         } else {
-            console.warn(`⚠️ Invalid modul parameter: ${modulParam}. Must be 1-9.`);
+            console.warn(`⚠️ Invalid modul parameter: ${modulParam}. Must be 0-10.`);
             // Show module selection screen if invalid parameter
             document.getElementById('moduleSelectionScreen').style.display = 'block';
         }
