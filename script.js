@@ -2143,6 +2143,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`🔗 URL parameter detected: user_group=${userGroup}`);
     }
     
+    // Get lang from URL parameter (defaults to 'de' if not specified)
+    const langParam = getURLParameter('lang');
+    if (langParam === 'en' || langParam === 'de') {
+        currentLanguage = langParam;
+        console.log(`🔗 URL parameter detected: lang=${langParam}`);
+    }
+    
     if (finalParam !== null) {
         console.log(`🔗 URL parameter detected: final`);
         // Automatically select the final module
@@ -2164,8 +2171,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('moduleSelectionScreen').style.display = 'block';
     }
     
-    // Initialize language toggle buttons
-    document.getElementById('langBtnDE').classList.add('active');
+    // Initialize language toggle buttons based on currentLanguage (which may have been set by URL parameter)
+    document.getElementById('langBtnDE').classList.toggle('active', currentLanguage === 'de');
+    document.getElementById('langBtnEN').classList.toggle('active', currentLanguage === 'en');
     
     // Initialize UI text (including credits)
     updateUIText();
