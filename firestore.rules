@@ -1,8 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow reads and writes to quizAnswers collection
+    // Educational quiz app: allow reads/writes to the quiz result collections
+    // (client-side reporting without auth).
     match /quizAnswers/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /final/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /modul0/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul1/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul2/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul3/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul4/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul5/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul6/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul7/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul8/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul9/{document=**} {
+      allow read, write: if true;
+    }
+    match /modul10/{document=**} {
       allow read, write: if true;
     }
   }

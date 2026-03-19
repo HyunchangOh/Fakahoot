@@ -120,6 +120,24 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+function adjustOptionHeightsForOverflow() {
+    const buttons = Array.from(document.querySelectorAll('.option-btn'));
+    if (buttons.length === 0) return;
+
+    // Reset first, then re-measure after layout
+    buttons.forEach(btn => btn.classList.remove('option-btn-overflow'));
+
+    // Wait for the browser to apply the layout so scrollHeight/clientHeight are accurate
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const anyOverflow = buttons.some(btn => btn.scrollHeight > btn.clientHeight + 1);
+            if (anyOverflow) {
+                buttons.forEach(btn => btn.classList.add('option-btn-overflow'));
+            }
+        });
+    });
+}
+
 // Module selection function
 function selectModule(moduleNumber) {
     selectedModule = moduleNumber;
@@ -767,9 +785,13 @@ function displayQuestion() {
             <img src="${question.imagePath}" alt="Question image" class="question-image" onerror="this.style.display='none'">
            </div>`
         : '';
+
+    const shouldScrollMainArea =
+        Boolean(question.imagePath) ||
+        (Array.isArray(question.options) && question.options.length >= 5);
     
     const questionHTML = `
-        <div class="question-container${question.imagePath ? ' question-container-scrollable' : ''}">
+        <div class="question-container${shouldScrollMainArea ? ' question-container-scrollable' : ''}">
             ${imageHTML}
             <div class="question-text">${question.question}</div>
             <div class="options-container">
@@ -790,6 +812,9 @@ function displayQuestion() {
             toggleAnswer(this);
         });
     });
+
+    // If option text is being clipped, make the option buttons taller for this question.
+    adjustOptionHeightsForOverflow();
 }
 
 function toggleAnswer(button) {

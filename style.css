@@ -681,6 +681,14 @@ body {
     flex-shrink: 1;
 }
 
+.option-btn.option-btn-overflow {
+    /* Only used when we detect that the button's content would otherwise be clipped. */
+    min-height: clamp(80px, 12vh, 120px);
+    align-items: flex-start;
+    padding-top: clamp(14px, 2.5vh, 22px);
+    padding-bottom: clamp(14px, 2.5vh, 22px);
+}
+
 .option-btn::before {
     content: '';
     position: absolute;
