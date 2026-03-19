@@ -110,6 +110,16 @@ function t(key, ...args) {
     return translation || key;
 }
 
+// Escape text for safe insertion into HTML (both attribute and innerHTML contexts).
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Module selection function
 function selectModule(moduleNumber) {
     selectedModule = moduleNumber;
@@ -764,7 +774,7 @@ function displayQuestion() {
             <div class="question-text">${question.question}</div>
             <div class="options-container">
                 ${question.options.filter(opt => opt && opt.trim()).map((option, index) => 
-                    `<button class="option-btn" data-answer="${option}">${option}</button>`
+                    `<button class="option-btn" data-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`
                 ).join('')}
             </div>
             <button class="submit-btn" id="submitBtn" onclick="submitAnswer()">${t('submitAnswer')}</button>
