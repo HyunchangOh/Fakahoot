@@ -687,6 +687,7 @@ body {
     align-items: flex-start;
     padding-top: clamp(14px, 2.5vh, 22px);
     padding-bottom: clamp(14px, 2.5vh, 22px);
+    font-size: calc(clamp(0.65em, calc(2.5vw - 0.25em), 1.05em) - 2pt);
 }
 
 .option-btn::before {
