@@ -724,13 +724,14 @@ function displayQuestion() {
         return q;
     });
     
-    // Show original title when displaying questions
+    // Show module title when displaying questions (NOT the feedback title)
     const titleElement = document.querySelector('.title');
-    if (titleElement && selectedModule) {
+    if (titleElement && selectedModule !== null && selectedModule !== undefined) {
         if (selectedModule === 'final') {
-            titleElement.textContent = `🎯 Final Test 🎯`;
+            titleElement.textContent = currentLanguage === 'de' ? 'Final Test' : 'Final Test';
         } else {
-            titleElement.textContent = `🎯 Modul ${selectedModule} Post-Test 🎯`;
+            // user requested: "just show Module N" for the question section
+            titleElement.textContent = currentLanguage === 'de' ? `Modul ${selectedModule}` : `Module ${selectedModule}`;
         }
         titleElement.style.display = 'block';
     }
