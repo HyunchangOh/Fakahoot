@@ -593,6 +593,17 @@ body {
     z-index: 2;
 }
 
+/* When a question includes an image, allow the main area to scroll instead of clipping. */
+.question-container-scrollable {
+    overflow-y: auto;
+}
+
+.question-container-scrollable .options-container {
+    /* Let the options container grow to its content height, so scrolling works correctly. */
+    flex: 0 0 auto;
+    overflow: visible;
+}
+
 @keyframes slideIn {
     from {
         opacity: 0;

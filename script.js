@@ -759,7 +759,7 @@ function displayQuestion() {
         : '';
     
     const questionHTML = `
-        <div class="question-container">
+        <div class="question-container${question.imagePath ? ' question-container-scrollable' : ''}">
             ${imageHTML}
             <div class="question-text">${question.question}</div>
             <div class="options-container">
