@@ -458,19 +458,30 @@ async function loadQuestions() {
                 // Remove PNG from parts for processing
                 parts = parts.filter(p => !/\.png$/i.test(p));
             }
-            
+
             // Require at least question + 2 options (minimum 3 parts)
             if (parts.length >= 3) {
                 const question = parts[0];
-                const correctAnswer = parts[1];
-                // Get all available options (parts 1 onwards, excluding empty parts)
-                const options = parts.slice(1).filter(p => p && p.trim());
-                
+                let options = parts.slice(1).filter(p => p && p.trim());
+
+                // Support multi-correct metadata for normal modules:
+                // a trailing standalone number (1-9) means first N options are correct.
+                let numCorrect = 1;
+                const trailing = options[options.length - 1];
+                const parsedNum = parseInt(trailing, 10);
+                if (!isNaN(parsedNum) && trailing === String(parsedNum) && parsedNum > 0 && parsedNum < 10) {
+                    numCorrect = parsedNum;
+                    options = options.slice(0, -1);
+                }
+
                 if (options.length >= 2) {
+                    const correctAnswers = options.slice(0, numCorrect);
+                    if (correctAnswers.length === 0) return null;
+
                     return {
                         question: question,
-                        correctAnswer: correctAnswer,
-                        correctAnswers: [correctAnswer], // For compatibility
+                        correctAnswer: correctAnswers[0],
+                        correctAnswers: correctAnswers,
                         options: options,
                         imagePath: imagePath
                     };
@@ -499,19 +510,30 @@ async function loadQuestions() {
                 // Remove PNG from parts for processing
                 parts = parts.filter(p => !/\.png$/i.test(p));
             }
-            
+
             // Require at least question + 2 options (minimum 3 parts)
             if (parts.length >= 3) {
                 const question = parts[0];
-                const correctAnswer = parts[1];
-                // Get all available options (parts 1 onwards, excluding empty parts)
-                const options = parts.slice(1).filter(p => p && p.trim());
-                
+                let options = parts.slice(1).filter(p => p && p.trim());
+
+                // Support multi-correct metadata for normal modules:
+                // a trailing standalone number (1-9) means first N options are correct.
+                let numCorrect = 1;
+                const trailing = options[options.length - 1];
+                const parsedNum = parseInt(trailing, 10);
+                if (!isNaN(parsedNum) && trailing === String(parsedNum) && parsedNum > 0 && parsedNum < 10) {
+                    numCorrect = parsedNum;
+                    options = options.slice(0, -1);
+                }
+
                 if (options.length >= 2) {
+                    const correctAnswers = options.slice(0, numCorrect);
+                    if (correctAnswers.length === 0) return null;
+
                     return {
                         question: question,
-                        correctAnswer: correctAnswer,
-                        correctAnswers: [correctAnswer], // For compatibility
+                        correctAnswer: correctAnswers[0],
+                        correctAnswers: correctAnswers,
                         options: options,
                         imagePath: imagePath
                     };
