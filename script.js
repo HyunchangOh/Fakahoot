@@ -123,6 +123,7 @@ function escapeHtml(str) {
 function adjustOptionHeightsForOverflow() {
     const buttons = Array.from(document.querySelectorAll('.option-btn'));
     if (buttons.length === 0) return;
+    const questionContainer = document.querySelector('.question-container');
 
     // Reset first, then re-measure after layout
     buttons.forEach(btn => btn.classList.remove('option-btn-overflow'));
@@ -133,6 +134,10 @@ function adjustOptionHeightsForOverflow() {
             const anyOverflow = buttons.some(btn => btn.scrollHeight > btn.clientHeight + 1);
             if (anyOverflow) {
                 buttons.forEach(btn => btn.classList.add('option-btn-overflow'));
+                // If we had to shrink option text due to overflow, make the main frame scrollable.
+                if (questionContainer) {
+                    questionContainer.classList.add('question-container-scrollable');
+                }
             }
         });
     });
